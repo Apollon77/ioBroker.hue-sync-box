@@ -1,18 +1,17 @@
-![Logo](admin/template_react.png)
-# ioBroker.template_react
+![Logo](admin/hue-sync-box.png)
+# ioBroker.hue-sync-box
 
-[![NPM version](https://img.shields.io/npm/v/iobroker.template_react.svg)](https://www.npmjs.com/package/iobroker.template_react)
-[![Downloads](https://img.shields.io/npm/dm/iobroker.template_react.svg)](https://www.npmjs.com/package/iobroker.template_react)
-![Number of Installations](https://iobroker.live/badges/template_react-installed.svg)
-![Current version in stable repository](https://iobroker.live/badges/template_react-stable.svg)
+[![NPM version](https://img.shields.io/npm/v/iobroker.hue-sync-box.svg)](https://www.npmjs.com/package/iobroker.hue-sync-box)
+[![Downloads](https://img.shields.io/npm/dm/iobroker.hue-sync-box.svg)](https://www.npmjs.com/package/iobroker.hue-sync-box)
+![Number of Installations](https://iobroker.live/badges/hue-sync-box-installed.svg)
+![Current version in stable repository](https://iobroker.live/badges/hue-sync-box-stable.svg)
 
-[![NPM](https://nodei.co/npm/iobroker.template_react.png?downloads=true)](https://nodei.co/npm/iobroker.template_react/)
+[![NPM](https://nodei.co/npm/iobroker.hue-sync-box.png?downloads=true)](https://nodei.co/npm/iobroker.template_react/)
 
-**Tests:** ![Test and Release](https://github.com/xXBJXx/ioBroker.template_react/workflows/Test%20and%20Release/badge.svg)
+**Tests:** ![Test and Release](https://github.com/xXBJXx/ioBroker.hue-sync-box/workflows/Test%20and%20Release/badge.svg)
 
-## template_react adapter for ioBroker
+## hue-sync-box adapter for ioBroker
 
-Template React with AlCalzone Hooks
 
 ## Developer manual
 This section is intended for the developer. It can be deleted later
@@ -22,7 +21,7 @@ This section is intended for the developer. It can be deleted later
 You are almost done, only a few steps left:
 1. Clone the repository from GitHub to a directory on your PC:
 	```bash
-	git clone https://github.com/xXBJXx/ioBroker.template_react
+	git clone https://github.com/xXBJXx/ioBroker.hue-sync-box
 	```
 
 1. Head over to [src/main.ts](src/main.ts) and start programming!

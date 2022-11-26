@@ -12,11 +12,11 @@ let secret: string | any[] = 'Zgfr56gFe87jJOM';
 
 // Global variables here
 
-class TemplateReact extends utils.Adapter {
+class HueSyncBox extends utils.Adapter {
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
 			...options,
-			name: 'template_react',
+			name: 'hue-sync-box',
 		});
 		this.on('ready', this.onReady.bind(this));
 		this.on('stateChange', this.onStateChange.bind(this));
@@ -158,8 +158,8 @@ class TemplateReact extends utils.Adapter {
 
 if (require.main !== module) {
 	// Export the constructor in compact mode
-	module.exports = (options: Partial<utils.AdapterOptions> | undefined) => new TemplateReact(options);
+	module.exports = (options: Partial<utils.AdapterOptions> | undefined) => new HueSyncBox(options);
 } else {
 	// otherwise start the instance directly
-	(() => new TemplateReact())();
+	(() => new HueSyncBox())();
 }

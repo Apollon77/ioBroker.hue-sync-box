@@ -89,8 +89,8 @@ jobs:
 #          # Then uncomment and customize the following block:
 #          sentry: true
 #          sentry-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
-#          sentry-project: "iobroker-test2typscript"
-#          sentry-version-prefix: "iobroker.test2typscript"
+#          sentry-project: "iobroker-hue-sync-box"
+#          sentry-version-prefix: "iobroker.hue-sync-box"
 #          sentry-sourcemap-paths: "build/ admin/build/"
 #          # If your sentry project is linked to a GitHub repository, you can enable the following option
 #          # sentry-github-integration: true

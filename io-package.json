@@ -1,6 +1,6 @@
 {
   "common": {
-	"name": "template_react",
+	"name": "hue-sync-box",
 	"version": "0.0.1",
 	"news": {
 	  "0.0.1": {
@@ -16,18 +16,18 @@
 		"zh-cn": "首次出版"
 	  }
 	},
-	"title": "Template React",
+	"title": "Hue Sync Box",
 	"titleLang": {
-	  "en": "Template React",
-	  "de": "Vorlage reagieren",
-	  "ru": "Шаблон React",
-	  "pt": "Modelo de reação",
-	  "nl": "Sjabloon Reageren",
-	  "fr": "Modèle Réagir",
-	  "it": "Modello Reagire",
-	  "es": "Plantilla Reaccionar",
-	  "pl": "Szablon Reaguj",
-	  "zh-cn": "模板反应"
+	  "en": "Hue Sync Box",
+	  "de": "Hue Sync Box",
+	  "ru": "Hue Sync Box",
+	  "pt": "Hue Sync Box",
+	  "nl": "Hue Sync Box",
+	  "fr": "Hue Sync Box",
+	  "it": "Hue Sync Box",
+	  "es": "Hue Sync Box",
+	  "pl": "Hue Sync Box",
+	  "zh-cn": "Hue Sync Box"
 	},
 	"desc": {
 	  "en": "Template React with AlCalzone Hooks",
@@ -46,7 +46,6 @@
 	],
 	"keywords": [
 	  "ioBroker",
-	  "template",
 	  "Smart Home",
 	  "home automation"
 	],
@@ -55,8 +54,8 @@
 	"main": "build/main.js",
 	"icon": "template_react.png",
 	"enabled": false,
-	"extIcon": "https://raw.githubusercontent.com/xXBJXx/ioBroker.template_react/main/admin/template_react.png",
-	"readme": "https://github.com/xXBJXx/ioBroker.template_react/blob/main/README.md",
+	"extIcon": "https://raw.githubusercontent.com/xXBJXx/ioBroker.hue-sync-box/main/admin/hue-sync-box.png",
+	"readme": "https://github.com/xXBJXx/ioBroker.hue-sync-box/blob/main/README.md",
 	"loglevel": "info",
 	"mode": "daemon",
 	"type": "hardware",
@@ -80,18 +79,11 @@
 	]
   },
   "protectedNative": [
-	"password"
   ],
   "encryptedNative": [
-	"password"
   ],
   "native": {
-	"option1": true,
-	"password": "",
-	"testInput": "",
-	"testOutput": "",
-	"stateID": "",
-	"tableValues": []
+	"option1": true
   },
   "objects": [],
   "instanceObjects": [
