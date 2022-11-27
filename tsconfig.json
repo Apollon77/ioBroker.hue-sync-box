@@ -29,7 +29,7 @@
 	// "noUnusedLocals": true,
 	// "noUnusedParameters": true,
 	// Uncomment this if you want the old behavior of catch variables being `any`
-	// "useUnknownInCatchVariables": false,
+	 "useUnknownInCatchVariables": false,
 
 	"sourceMap": true,
 	"inlineSourceMap": false
