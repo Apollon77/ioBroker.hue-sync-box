@@ -1,18 +1,35 @@
 /*
  * Created with @iobroker/create-adapter v2.0.1
  */
-
+// TODO: API https://developers.meethue.com/develop/hue-entertainment/hue-hdmi-sync-box-api/#Device%20Discovery
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 import * as utils from '@iobroker/adapter-core';
+import {
+	behaviorChannelObj,
+	behaviorInputObj,
+	behaviorObj,
+	capabilitiesObj,
+	deviceChannelObj,
+	deviceStateObj,
+	executionChannelObj,
+	executionObj,
+	groupsObj,
+	hdmiChannelObj,
+	hdmiInputObj,
+	hdmiObj,
+	hueChannelObj,
+	hueObj,
+	networkObj,
+	updateObj,
+	video_game_musicObj,
+} from './lib/object_definition';
 // Load your modules here, e.g.:
-
-// variable with the native-secret for decryption
-let secret: string | any[] = 'Zgfr56gFe87jJOM';
 
 // Global variables here
 
 class HueSyncBox extends utils.Adapter {
+	private rooms: any[];
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
 			...options,
@@ -23,6 +40,7 @@ class HueSyncBox extends utils.Adapter {
 		// this.on('objectChange', this.onObjectChange.bind(this));
 		// this.on('message', this.onMessage.bind(this));
 		this.on('unload', this.onUnload.bind(this));
+		this.rooms = [];
 	}
 
 	/**
@@ -30,67 +48,235 @@ class HueSyncBox extends utils.Adapter {
 	 */
 	private async onReady(): Promise<void> {
 		// Initialize your adapter here
-
 		// Reset the connection indicator during startup
 		this.setState('info.connection', false, true);
+		await this.createStates();
+	}
+	//
+	// private async request(url: string): Promise<void> {
+	// 	try {
+	// 		// let data = JSON.stringify({
+	// 		// 	hdmi: {
+	// 		// 		input4: {
+	// 		// 			name: 'test4',
+	// 		// 		},
+	// 		// 	},
+	// 		// });
+	// 		// const data2 = JSON.stringify({
+	// 		// 	syncActive: false,
+	// 		// });
+	//
+	// 		const config = {
+	// 			method: 'get',
+	// 			url: url,
+	// 			headers: {
+	// 				Authorization: `Bearer ${this.config.devices[0].token}`,
+	// 				'Content-Type': 'application/json',
+	// 			},
+	// 			// httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+	// 			// data: data,
+	// 		};
+	//
+	// 		console.log('request');
+	// 		const response = await axios(config);
+	// 		// this.log.info('response: ' + JSON.stringify(response.data));
+	// 		console.log('response: ', response.data);
+	// 	} catch (error) {
+	// 		this.log.error('error: ' + error);
+	// 		console.log('error: ', error);
+	// 	}
+	// }
 
-		// get the Native secret for decryption
-		//		const systemObject = await this.getForeignObjectAsync('system.config', 'meta');
-		//		if (systemObject) {
-		//			secret = systemObject.native.secret ?? 'Zgfr56gFe87jJOM';
-		//		}
-		//		console.log(decrypt(secret, this.config.tableValues[0].password));
+	private async createStates(): Promise<void> {
+		try {
+			this.writeLog(`initializing Object creation`, false, 'debug');
+			const devices = this.config.devices;
+			// create the states for the devices
+			for (const device of devices) {
+				this.writeLog(`creating device with Name  bax_${device.room}`, false, 'debug');
+				// create the device
+				await this.setObjectNotExistsAsync(`box_${device.room}`, {
+					type: 'device',
+					common: {
+						name: device.room,
+					},
+					native: {},
+				});
 
-		// The adapters config (in the instance object everything under the attribute "native") is accessible via
-		// this.config:
-		this.log.info('config option1: ' + this.config.option1);
-		this.log.info('config testInput: ' + this.config.testInput);
+				this.writeLog(`creating channel and states for device`, false, 'debug');
+				// create the channels and states for the device
+				await this.setObjectNotExistsAsync(`box_${device.room}.device`, {
+					type: 'channel',
+					common: {
+						name: 'device',
+					},
+					native: {},
+				});
 
-		this.log.error('config password: ' + this.config.password);
-		/*
-		For every state in the system there has to be also an object of type state
-		Here a simple template for a boolean variable named "testVariable"
-		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
-		*/
-		await this.setObjectNotExistsAsync('testVariable', {
-			type: 'state',
-			common: {
-				name: 'testVariable',
-				type: 'boolean',
-				role: 'indicator',
-				read: true,
-				write: true,
-			},
-			native: {},
-		});
+				for (const key in deviceChannelObj) {
+					if (deviceChannelObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.device.${key}`, deviceChannelObj[key]);
+					}
+				}
 
-		// In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
-		this.subscribeStates('testVariable');
-		// You can also add a subscription for multiple states. The following line watches all states starting with "lights."
-		// this.subscribeStates('lights.*');
-		// Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
-		// this.subscribeStates('*');
+				for (const key in deviceStateObj) {
+					if (deviceStateObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.device.${key}`, deviceStateObj[key]);
+					}
+				}
 
-		/*
-			setState examples
-			you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-		*/
-		// the variable testVariable is set to true as command (ack=false)
-		await this.setStateAsync('testVariable', true);
+				for (const key in networkObj) {
+					if (networkObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.device.wifi.${key}`, networkObj[key]);
+					}
+				}
+				for (const key in updateObj) {
+					if (updateObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.device.update.${key}`, updateObj[key]);
+					}
+				}
+				for (const key in capabilitiesObj) {
+					if (capabilitiesObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(
+							`box_${device.room}.device.capabilities.${key}`,
+							capabilitiesObj[key],
+						);
+					}
+				}
 
-		// same thing, but the value is flagged "ack"
-		// ack should be always set to true if the value is received from or acknowledged from the target system
-		await this.setStateAsync('testVariable', { val: true, ack: true });
+				this.writeLog(`creating channel and states for hue`, false, 'debug');
+				await this.setObjectNotExistsAsync(`box_${device.room}.hue`, {
+					type: 'channel',
+					common: {
+						name: 'hue',
+					},
+					native: {},
+				});
 
-		// same thing, but the state is deleted after 30s (getState will return null afterwards)
-		await this.setStateAsync('testVariable', { val: true, ack: true, expire: 30 });
+				for (const key in hueChannelObj) {
+					if (hueChannelObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.hue.${key}`, hueChannelObj[key]);
+					}
+				}
 
-		// examples for the checkPassword/checkGroup functions
-		let result = await this.checkPasswordAsync('admin', 'iobroker');
-		this.log.info('check user admin pw iobroker: ' + result);
+				for (const key in hueObj) {
+					if (hueObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.hue.${key}`, hueObj[key]);
+					}
+				}
+				for (const key in groupsObj) {
+					if (groupsObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.hue.groups.${key}`, groupsObj[key]);
+					}
+				}
 
-		result = await this.checkGroupAsync('admin', 'admin');
-		this.log.info('check group user admin group admin: ' + result);
+				this.writeLog(`creating channel and states for execution`, false, 'debug');
+				await this.setObjectNotExistsAsync(`box_${device.room}.execution`, {
+					type: 'channel',
+					common: {
+						name: 'execution',
+					},
+					native: {},
+				});
+
+				for (const key in executionChannelObj) {
+					if (executionChannelObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(
+							`box_${device.room}.execution.${key}`,
+							executionChannelObj[key],
+						);
+					}
+				}
+
+				for (const key in executionObj) {
+					if (executionObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.execution.${key}`, executionObj[key]);
+					}
+				}
+				const array = ['game', 'music', 'video'];
+				for (const key in video_game_musicObj) {
+					for (const arrayKey in array) {
+						if (video_game_musicObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(
+								`box_${device.room}.execution.${array[arrayKey]}.${key}`,
+								video_game_musicObj[key],
+							);
+						}
+					}
+				}
+
+				this.writeLog(`creating channel and states for hdmi`, false, 'debug');
+				await this.setObjectNotExistsAsync(`box_${device.room}.hdmi`, {
+					type: 'channel',
+					common: {
+						name: 'hdmi',
+					},
+					native: {},
+				});
+
+				for (const key in hdmiChannelObj) {
+					if (hdmiChannelObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.hdmi.${key}`, hdmiChannelObj[key]);
+					}
+				}
+
+				for (const key in hdmiObj) {
+					if (hdmiObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.hdmi.${key}`, hdmiObj[key]);
+					}
+				}
+
+				for (const key in hdmiInputObj) {
+					if (hdmiInputObj.hasOwnProperty(key)) {
+						for (let i = 1; i < 5; i++) {
+							await this.setObjectNotExistsAsync(
+								`box_${device.room}.hdmi.input${i}.${key}`,
+								hdmiInputObj[key],
+							);
+						}
+					}
+					await this.setObjectNotExistsAsync(`box_${device.room}.hdmi.output.${key}`, hdmiInputObj[key]);
+				}
+
+				this.writeLog(`creating channel and states for behavior`, false, 'debug');
+				await this.setObjectNotExistsAsync(`box_${device.room}.behavior`, {
+					type: 'channel',
+					common: {
+						name: 'behavior',
+					},
+					native: {},
+				});
+
+				for (const key in behaviorChannelObj) {
+					if (behaviorChannelObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(
+							`box_${device.room}.behavior.${key}`,
+							behaviorChannelObj[key],
+						);
+					}
+				}
+
+				for (const key in behaviorObj) {
+					if (behaviorObj.hasOwnProperty(key)) {
+						await this.setObjectNotExistsAsync(`box_${device.room}.behavior.${key}`, behaviorObj[key]);
+					}
+				}
+
+				for (const key in behaviorInputObj) {
+					if (behaviorInputObj.hasOwnProperty(key)) {
+						for (let i = 1; i < 5; i++) {
+							await this.setObjectNotExistsAsync(
+								`box_${device.room}.behavior.input${i}.${key}`,
+								behaviorInputObj[key],
+							);
+						}
+					}
+				}
+			}
+			this.writeLog(`all device / channel and states were created`, false, 'debug');
+		} catch (error) {
+			this.writeLog(`[createObjects] ${error.message} Stack: ${error.stack}`, false, 'error');
+		}
 	}
 
 	/**
@@ -126,12 +312,38 @@ class HueSyncBox extends utils.Adapter {
 	// }
 
 	/**
+	 * @description a function for log output
+	 */
+	private writeLog(
+		logtext: string,
+		consoleLog: boolean,
+		logtype: 'silly' | 'info' | 'debug' | 'warn' | 'error',
+	): void {
+		try {
+			if (logtype === 'silly') this.log.silly(logtext);
+			if (logtype === 'info') this.log.info(logtext);
+			if (logtype === 'debug') this.log.debug(logtext);
+			if (logtype === 'warn') this.log.warn(logtext);
+			if (logtype === 'error') this.log.error(logtext);
+			if (consoleLog) console.log(logtext);
+		} catch (error) {
+			this.log.error(`writeLog error: ${error} , stack: ${error.stack}`);
+		}
+	}
+
+	/**
 	 * Is called if a subscribed state changes
 	 */
-	private onStateChange(id: string, state: ioBroker.State | null | undefined): void {
+	private async onStateChange(id: string, state: ioBroker.State | null | undefined): Promise<void> {
 		if (state) {
+			console.log('state: ', state.val);
 			// The state was changed
 			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
+			if (id === this.namespace + '.testVariable') {
+				// await this.request('http://localhost:3000/api/v1');
+				await this.createStates();
+				console.log('testVariable changed');
+			}
 		} else {
 			// The state was deleted
 			this.log.info(`state ${id} deleted`);

@@ -1,112 +1,110 @@
 {
-  "common": {
-	"name": "hue-sync-box",
-	"version": "0.0.1",
-	"news": {
-	  "0.0.1": {
-		"en": "initial release",
-		"de": "Erstveröffentlichung",
-		"ru": "Начальная версия",
-		"pt": "lançamento inicial",
-		"nl": "Eerste uitgave",
-		"fr": "Première version",
-		"it": "Versione iniziale",
-		"es": "Versión inicial",
-		"pl": "Pierwsze wydanie",
-		"zh-cn": "首次出版"
-	  }
+	"common": {
+		"name": "hue-sync-box",
+		"version": "0.0.1",
+		"news": {
+			"0.0.1": {
+				"en": "initial release",
+				"de": "Erstveröffentlichung",
+				"ru": "Начальная версия",
+				"pt": "lançamento inicial",
+				"nl": "Eerste uitgave",
+				"fr": "Première version",
+				"it": "Versione iniziale",
+				"es": "Versión inicial",
+				"pl": "Pierwsze wydanie",
+				"zh-cn": "首次出版"
+			}
+		},
+		"title": "Hue Sync Box",
+		"titleLang": {
+			"en": "Hue Sync Box",
+			"de": "Hue Sync Box",
+			"ru": "Hue Sync Box",
+			"pt": "Hue Sync Box",
+			"nl": "Hue Sync Box",
+			"fr": "Hue Sync Box",
+			"it": "Hue Sync Box",
+			"es": "Hue Sync Box",
+			"pl": "Hue Sync Box",
+			"zh-cn": "Hue Sync Box"
+		},
+		"desc": {
+			"en": "Template React with AlCalzone Hooks",
+			"de": "Template React mit AlCalzone Hooks",
+			"ru": "Шаблон React с хуками AlCalzone",
+			"pt": "Reação do modelo com ganchos AlCalzone",
+			"nl": "Sjabloon Reageren met AlCalzone Hooks",
+			"fr": "Modèle Réagissez avec les crochets AlCalzone",
+			"it": "Modello Reagire con Ganci AlCalzone",
+			"es": "Plantilla Reaccionar con ganchos de AlCalzone",
+			"pl": "Szablon React z hakami AlCalzone",
+			"zh-cn": "模板与 AlCalzone Hooks 反应"
+		},
+		"authors": ["Issi <issi.dev.iobroker@gmail.com>"],
+		"keywords": ["ioBroker", "Smart Home", "home automation"],
+		"license": "MIT",
+		"platform": "Javascript/Node.js",
+		"main": "build/main.js",
+		"icon": "template_react.png",
+		"enabled": false,
+		"extIcon": "https://raw.githubusercontent.com/xXBJXx/ioBroker.hue-sync-box/main/admin/hue-sync-box.png",
+		"readme": "https://github.com/xXBJXx/ioBroker.hue-sync-box/blob/main/README.md",
+		"loglevel": "info",
+		"mode": "daemon",
+		"type": "hardware",
+		"compact": true,
+		"connectionType": "local",
+		"dataSource": "poll",
+		"materialize": true,
+		"adminUI": {
+			"config": "materialize"
+		},
+		"eraseOnUpload": true,
+		"dependencies": [
+			{
+				"js-controller": ">=4.0.23"
+			}
+		],
+		"globalDependencies": [
+			{
+				"admin": ">=5.0.0"
+			}
+		]
 	},
-	"title": "Hue Sync Box",
-	"titleLang": {
-	  "en": "Hue Sync Box",
-	  "de": "Hue Sync Box",
-	  "ru": "Hue Sync Box",
-	  "pt": "Hue Sync Box",
-	  "nl": "Hue Sync Box",
-	  "fr": "Hue Sync Box",
-	  "it": "Hue Sync Box",
-	  "es": "Hue Sync Box",
-	  "pl": "Hue Sync Box",
-	  "zh-cn": "Hue Sync Box"
+	"protectedNative": [],
+	"encryptedNative": [],
+	"native": {
+		"devices": [
+			{
+				"room": "Wohnzimmer",
+				"ip": "localhost:3000",
+				"token": "1234567890"
+			}
+		]
 	},
-	"desc": {
-	  "en": "Template React with AlCalzone Hooks",
-	  "de": "Template React mit AlCalzone Hooks",
-	  "ru": "Шаблон React с хуками AlCalzone",
-	  "pt": "Reação do modelo com ganchos AlCalzone",
-	  "nl": "Sjabloon Reageren met AlCalzone Hooks",
-	  "fr": "Modèle Réagissez avec les crochets AlCalzone",
-	  "it": "Modello Reagire con Ganci AlCalzone",
-	  "es": "Plantilla Reaccionar con ganchos de AlCalzone",
-	  "pl": "Szablon React z hakami AlCalzone",
-	  "zh-cn": "模板与 AlCalzone Hooks 反应"
-	},
-	"authors": [
-	  "Issi <issi.dev.iobroker@gmail.com>"
-	],
-	"keywords": [
-	  "ioBroker",
-	  "Smart Home",
-	  "home automation"
-	],
-	"license": "MIT",
-	"platform": "Javascript/Node.js",
-	"main": "build/main.js",
-	"icon": "template_react.png",
-	"enabled": false,
-	"extIcon": "https://raw.githubusercontent.com/xXBJXx/ioBroker.hue-sync-box/main/admin/hue-sync-box.png",
-	"readme": "https://github.com/xXBJXx/ioBroker.hue-sync-box/blob/main/README.md",
-	"loglevel": "info",
-	"mode": "daemon",
-	"type": "hardware",
-	"compact": true,
-	"connectionType": "local",
-	"dataSource": "poll",
-	"materialize": true,
-	"adminUI": {
-	  "config": "materialize"
-	},
-	"eraseOnUpload": true,
-	"dependencies": [
-	  {
-		"js-controller": ">=4.0.23"
-	  }
-	],
-	"globalDependencies": [
-	  {
-		"admin": ">=5.0.0"
-	  }
+	"objects": [],
+	"instanceObjects": [
+		{
+			"_id": "info",
+			"type": "channel",
+			"common": {
+				"name": "Information"
+			},
+			"native": {}
+		},
+		{
+			"_id": "info.connection",
+			"type": "state",
+			"common": {
+				"role": "indicator.connected",
+				"name": "Device or service connected",
+				"type": "boolean",
+				"read": true,
+				"write": false,
+				"def": false
+			},
+			"native": {}
+		}
 	]
-  },
-  "protectedNative": [
-  ],
-  "encryptedNative": [
-  ],
-  "native": {
-	"option1": true
-  },
-  "objects": [],
-  "instanceObjects": [
-	{
-	  "_id": "info",
-	  "type": "channel",
-	  "common": {
-		"name": "Information"
-	  },
-	  "native": {}
-	},
-	{
-	  "_id": "info.connection",
-	  "type": "state",
-	  "common": {
-		"role": "indicator.connected",
-		"name": "Device or service connected",
-		"type": "boolean",
-		"read": true,
-		"write": false,
-		"def": false
-	  },
-	  "native": {}
-	}
-  ]
 }
