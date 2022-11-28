@@ -32,9 +32,10 @@ __export(object_definition_exports, {
   hdmiObj: () => hdmiObj,
   hueChannelObj: () => hueChannelObj,
   hueObj: () => hueObj,
+  musicObj: () => musicObj,
   networkObj: () => networkObj,
   updateObj: () => updateObj,
-  video_game_musicObj: () => video_game_musicObj
+  video_gameObj: () => video_gameObj
 });
 module.exports = __toCommonJS(object_definition_exports);
 const deviceChannelObj = {
@@ -229,9 +230,7 @@ const deviceStateObj = {
       }
     },
     native: {}
-  }
-};
-const networkObj = {
+  },
   wifiState: {
     type: "state",
     common: {
@@ -251,6 +250,47 @@ const networkObj = {
     },
     native: {}
   },
+  termsAgreed: {
+    type: "state",
+    common: {
+      name: "terms Agreed",
+      desc: "terms Agreed of the device",
+      type: "boolean",
+      role: "indicator",
+      def: false,
+      read: true,
+      write: true
+    },
+    native: {}
+  },
+  pushlink: {
+    type: "state",
+    common: {
+      name: "pushlink",
+      desc: "pushlink of the device",
+      type: "string",
+      role: "text",
+      def: "idle",
+      read: true,
+      write: false
+    },
+    native: {}
+  },
+  beta: {
+    type: "state",
+    common: {
+      name: "beta",
+      desc: "beta of the device",
+      type: "boolean",
+      role: "indicator",
+      def: false,
+      read: true,
+      write: false
+    },
+    native: {}
+  }
+};
+const networkObj = {
   ssid: {
     type: "state",
     common: {
@@ -370,6 +410,19 @@ const hueObj = {
     common: {
       name: "bridge Ip Address",
       desc: "bridge Ip Address of the device",
+      type: "string",
+      role: "text",
+      def: "",
+      read: true,
+      write: false
+    },
+    native: {}
+  },
+  groupId: {
+    type: "state",
+    common: {
+      name: "group Id",
+      desc: "group Id of the device",
       type: "string",
       role: "text",
       def: "",
@@ -720,7 +773,7 @@ const executionObj = {
     native: {}
   }
 };
-const video_game_musicObj = {
+const video_gameObj = {
   intensity: {
     type: "state",
     common: {
@@ -739,11 +792,46 @@ const video_game_musicObj = {
     common: {
       name: "backgroundLighting",
       desc: "backgroundLighting of the video",
+      type: "boolean",
+      role: "switch",
+      def: false,
+      read: true,
+      write: true
+    },
+    native: {}
+  }
+};
+const musicObj = {
+  intensity: {
+    type: "state",
+    common: {
+      name: "intensity",
+      desc: "intensity of the video",
       type: "string",
       role: "text",
       def: "",
       read: true,
       write: true
+    },
+    native: {}
+  },
+  palette: {
+    type: "state",
+    common: {
+      name: "backgroundLighting",
+      desc: "backgroundLighting of the video",
+      type: "string",
+      role: "text",
+      def: "neutral",
+      read: true,
+      write: true,
+      states: {
+        happyEnergetic: "happyEnergetic",
+        happyCalm: "happyCalm",
+        melancholicCalm: "melancholicCalm",
+        melancholicEnergetic: "melancholicEnergetic",
+        neutral: "neutral"
+      }
     },
     native: {}
   }
@@ -1020,6 +1108,34 @@ const behaviorObj = {
     },
     native: {}
   },
+  hpdOutputEnableMs: {
+    type: "state",
+    common: {
+      name: "hpd Output Enable Ms",
+      desc: "Time in milliseconds to wait before enabling output after a source is plugged in. Default: 1000.",
+      type: "number",
+      role: "level",
+      def: 1500,
+      read: true,
+      write: true,
+      min: 0,
+      max: 1e6
+    },
+    native: {}
+  },
+  arcBypassMode: {
+    type: "state",
+    common: {
+      name: "arc Bypass Mode",
+      desc: "Bypass mode for ARC. Default: 0. Disabled 0, Enabled 1.",
+      type: "number",
+      role: "value",
+      def: 0,
+      read: true,
+      write: true
+    },
+    native: {}
+  },
   forceDoviNative: {
     type: "state",
     common: {
@@ -1107,8 +1223,9 @@ const behaviorInputObj = {
   hdmiObj,
   hueChannelObj,
   hueObj,
+  musicObj,
   networkObj,
   updateObj,
-  video_game_musicObj
+  video_gameObj
 });
 //# sourceMappingURL=object_definition.js.map

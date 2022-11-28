@@ -207,8 +207,6 @@ export const deviceStateObj: { [key: string]: any } = {
 		},
 		native: {},
 	},
-};
-export const networkObj: { [key: string]: any } = {
 	// uninitialized, disconnected, lan, wan
 	wifiState: {
 		type: 'state',
@@ -229,6 +227,47 @@ export const networkObj: { [key: string]: any } = {
 		},
 		native: {},
 	},
+	termsAgreed: {
+		type: 'state',
+		common: {
+			name: 'terms Agreed',
+			desc: 'terms Agreed of the device',
+			type: 'boolean',
+			role: 'indicator',
+			def: false,
+			read: true,
+			write: true,
+		},
+		native: {},
+	},
+	pushlink: {
+		type: 'state',
+		common: {
+			name: 'pushlink',
+			desc: 'pushlink of the device',
+			type: 'string',
+			role: 'text',
+			def: 'idle',
+			read: true,
+			write: false,
+		},
+		native: {},
+	},
+	beta: {
+		type: 'state',
+		common: {
+			name: 'beta',
+			desc: 'beta of the device',
+			type: 'boolean',
+			role: 'indicator',
+			def: false,
+			read: true,
+			write: false,
+		},
+		native: {},
+	},
+};
+export const networkObj: { [key: string]: any } = {
 	// Wifi SSID
 	ssid: {
 		type: 'state',
@@ -371,6 +410,19 @@ export const hueObj: { [key: string]: any } = {
 		common: {
 			name: 'bridge Ip Address',
 			desc: 'bridge Ip Address of the device',
+			type: 'string',
+			role: 'text',
+			def: '',
+			read: true,
+			write: false,
+		},
+		native: {},
+	},
+	groupId: {
+		type: 'state',
+		common: {
+			name: 'group Id',
+			desc: 'group Id of the device',
 			type: 'string',
 			role: 'text',
 			def: '',
@@ -757,7 +809,7 @@ export const executionObj: { [key: string]: any } = {
 		native: {},
 	},
 };
-export const video_game_musicObj: { [key: string]: any } = {
+export const video_gameObj: { [key: string]: any } = {
 	//subtle, moderate, high, intense
 	intensity: {
 		type: 'state',
@@ -778,11 +830,48 @@ export const video_game_musicObj: { [key: string]: any } = {
 		common: {
 			name: 'backgroundLighting',
 			desc: 'backgroundLighting of the video',
+			type: 'boolean',
+			role: 'switch',
+			def: false,
+			read: true,
+			write: true,
+		},
+		native: {},
+	},
+};
+export const musicObj: { [key: string]: any } = {
+	//subtle, moderate, high, intense
+	intensity: {
+		type: 'state',
+		common: {
+			name: 'intensity',
+			desc: 'intensity of the video',
 			type: 'string',
 			role: 'text',
 			def: '',
 			read: true,
 			write: true,
+		},
+		native: {},
+	},
+	// happyEnergetic, happyCalm, melancholicCalm, melancholic Energetic, neutral
+	palette: {
+		type: 'state',
+		common: {
+			name: 'backgroundLighting',
+			desc: 'backgroundLighting of the video',
+			type: 'string',
+			role: 'text',
+			def: 'neutral',
+			read: true,
+			write: true,
+			states: {
+				happyEnergetic: 'happyEnergetic',
+				happyCalm: 'happyCalm',
+				melancholicCalm: 'melancholicCalm',
+				melancholicEnergetic: 'melancholicEnergetic',
+				neutral: 'neutral',
+			},
 		},
 		native: {},
 	},
@@ -1074,6 +1163,34 @@ export const behaviorObj: { [key: string]: any } = {
 				0: 'Disabled',
 				1: 'Enabled',
 			},
+		},
+		native: {},
+	},
+	hpdOutputEnableMs: {
+		type: 'state',
+		common: {
+			name: 'hpd Output Enable Ms',
+			desc: 'Time in milliseconds to wait before enabling output after a source is plugged in. Default: 1000.',
+			type: 'number',
+			role: 'level',
+			def: 1500,
+			read: true,
+			write: true,
+			min: 0,
+			max: 1000000,
+		},
+		native: {},
+	},
+	arcBypassMode: {
+		type: 'state',
+		common: {
+			name: 'arc Bypass Mode',
+			desc: 'Bypass mode for ARC. Default: 0. Disabled 0, Enabled 1.',
+			type: 'number',
+			role: 'value',
+			def: 0,
+			read: true,
+			write: true,
 		},
 		native: {},
 	},
