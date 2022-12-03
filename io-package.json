@@ -46,9 +46,9 @@
 		"license": "MIT",
 		"platform": "Javascript/Node.js",
 		"main": "build/main.js",
-		"icon": "template_react.png",
+		"icon": "hueSyncBox.png",
 		"enabled": false,
-		"extIcon": "https://raw.githubusercontent.com/xXBJXx/ioBroker.hue-sync-box/main/admin/hue-sync-box.png",
+		"extIcon": "https://raw.githubusercontent.com/xXBJXx/ioBroker.hue-sync-box/main/admin/hueSyncBox.png",
 		"readme": "https://github.com/xXBJXx/ioBroker.hue-sync-box/blob/main/README.md",
 		"loglevel": "info",
 		"mode": "daemon",
@@ -57,6 +57,8 @@
 		"connectionType": "local",
 		"dataSource": "poll",
 		"materialize": true,
+		"tier": 3,
+		"singleton": true,
 		"adminUI": {
 			"config": "materialize"
 		},
@@ -75,13 +77,7 @@
 	"protectedNative": [],
 	"encryptedNative": [],
 	"native": {
-		"devices": [
-			{
-				"room": "Wohnzimmer",
-				"ip": "localhost:3000",
-				"token": "1234567890"
-			}
-		]
+		"devices": []
 	},
 	"objects": [],
 	"instanceObjects": [
