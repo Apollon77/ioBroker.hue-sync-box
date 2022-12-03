@@ -2,12 +2,10 @@
   "name": "iobroker.hue-sync-box",
   "version": "0.0.1",
   "description": "",
-  "contributors": [
-    {
+  "author": {
       "name": "Issi",
       "email": "issi.dev.iobroker@gmail.com"
-    }
-  ],
+    },
   "homepage": "https://github.com/xXBJXx/ioBroker.hue-sync-box",
   "license": "MIT",
   "keywords": [
@@ -90,10 +88,11 @@
     "prebuild:react": "rimraf admin/build",
     "build:react": "build-adapter react",
     "watch:react": "build-adapter react --watch",
+    "test:axios" : "mocha test/axiosTest.mjs --exit",
     "test:ts": "mocha --config test/mocharc.custom.json src/**/*.test.ts",
     "test:package": "mocha test/package --exit",
     "test:integration": "mocha test/integration --exit",
-    "test": "npm run test:ts && npm run test:package",
+    "test": "npm run test:ts && npm run test:package && npm run test:axios",
     "check": "tsc --noEmit && tsc --noEmit -p admin/tsconfig.json",
     "lint": "eslint --ext .ts,.tsx src/ admin/src/",
     "translate": "translate-adapter",
