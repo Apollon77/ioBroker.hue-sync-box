@@ -259,7 +259,7 @@ const deviceStateObj = {
       role: "indicator",
       def: false,
       read: true,
-      write: true
+      write: false
     },
     native: {}
   },

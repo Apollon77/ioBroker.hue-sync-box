@@ -236,7 +236,7 @@ export const deviceStateObj: { [key: string]: any } = {
 			role: 'indicator',
 			def: false,
 			read: true,
-			write: true,
+			write: false,
 		},
 		native: {},
 	},
