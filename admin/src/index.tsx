@@ -32,7 +32,7 @@ const SettingsPageContent: React.FC = React.memo(() => {
 
 	return (
 		<React.Fragment>
-			<SettingPage settings={settings} changeSetting={(option, value) => handleChange(option, value)} />
+			<SettingPage settings={settings} onChange={(option, value) => handleChange(option, value)} />
 		</React.Fragment>
 	);
 });
@@ -40,6 +40,9 @@ const SettingsPageContent: React.FC = React.memo(() => {
 const migrateSettings = (settings: ioBroker.AdapterConfig) => {
 	// Here's an example for editing settings after they are loaded from the backend
 	// In this case, option1 will be set to true by default
+	if (settings.devices === undefined) {
+		settings.devices = [];
+	}
 };
 
 // Load your translations
@@ -59,7 +62,7 @@ const translations: Translations = {
 const Root: React.FC = () => {
 	return (
 		<ThemeProvider theme={theme(themeName)}>
-			<SettingsApp name="my-adapter" afterLoad={migrateSettings} translations={translations}>
+			<SettingsApp name="hue-Sync-Box" afterLoad={migrateSettings} translations={translations}>
 				<SettingsPageContent />
 			</SettingsApp>
 		</ThemeProvider>
