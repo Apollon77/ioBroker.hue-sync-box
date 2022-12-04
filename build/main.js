@@ -45,7 +45,7 @@ class HueSyncBox extends utils.Adapter {
       for (const devicesKey in this.config.devices) {
         if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
           const device = this.config.devices[devicesKey];
-          const result = await this.apiCall(`http://${device.ip}/api/v1`, device.token, "GET");
+          const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, "GET");
           if (result.status === 200) {
             this.writeLog("create data", "debug");
             await this.createStates(device, result);
@@ -183,15 +183,15 @@ class HueSyncBox extends utils.Adapter {
       let url;
       if (channel3 !== void 0) {
         if (commandWord === channel3) {
-          url = `http://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}`;
+          url = `https://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}`;
         } else {
-          url = `http://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}/${channel3}`;
+          url = `https://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}/${channel3}`;
         }
       } else {
         if (commandWord === channel2) {
-          url = `http://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}`;
+          url = `https://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}`;
         } else {
-          url = `http://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}`;
+          url = `https://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}`;
         }
       }
       this.writeLog(`assemble the url ${url}`, "debug");

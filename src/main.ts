@@ -64,7 +64,7 @@ class HueSyncBox extends utils.Adapter {
 			for (const devicesKey in this.config.devices) {
 				if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
 					const device = this.config.devices[devicesKey];
-					const result = await this.apiCall(`http://${device.ip}/api/v1`, device.token, 'GET');
+					const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, 'GET');
 					if (result.status === 200) {
 						// if (!this.createdData) {
 						this.writeLog('create data', 'debug');
@@ -227,18 +227,18 @@ class HueSyncBox extends utils.Adapter {
 			if (channel3 !== undefined) {
 				// check if the channel3 same as the commandWord
 				if (commandWord === channel3) {
-					url = `http://${boxConfig?.ip}/api/v1/${channel}/${channel2}`;
+					url = `https://${boxConfig?.ip}/api/v1/${channel}/${channel2}`;
 				} else {
 					// if not, add the channel3 to the url
-					url = `http://${boxConfig?.ip}/api/v1/${channel}/${channel2}/${channel3}`;
+					url = `https://${boxConfig?.ip}/api/v1/${channel}/${channel2}/${channel3}`;
 				}
 			} else {
 				// check if the commandWord same as the channel2
 				if (commandWord === channel2) {
-					url = `http://${boxConfig?.ip}/api/v1/${channel}`;
+					url = `https://${boxConfig?.ip}/api/v1/${channel}`;
 				} else {
 					// if not, add the channel2 to the url
-					url = `http://${boxConfig?.ip}/api/v1/${channel}/${channel2}`;
+					url = `https://${boxConfig?.ip}/api/v1/${channel}/${channel2}`;
 				}
 			}
 			this.writeLog(`assemble the url ${url}`, 'debug');
