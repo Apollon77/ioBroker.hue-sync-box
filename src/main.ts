@@ -697,7 +697,6 @@ class HueSyncBox extends utils.Adapter {
 				try {
 					this.writeLog('start registrations', 'info');
 					const device = obj.message as { ip: string; name: string };
-					device.ip = 'localhost:3000';
 					const registrationsUrl = `${protocol}://${device.ip}/api/v1/registrations`;
 					const registrations = await axios.post(registrationsUrl, {
 						headers: {
