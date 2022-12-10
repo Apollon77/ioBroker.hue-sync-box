@@ -13,6 +13,7 @@
 				"it": "Versione iniziale",
 				"es": "Versión inicial",
 				"pl": "Pierwsze wydanie",
+				"uk": "Початкова версія",
 				"zh-cn": "首次出版"
 			}
 		},
@@ -27,6 +28,7 @@
 			"it": "Hue Sync Box",
 			"es": "Hue Sync Box",
 			"pl": "Hue Sync Box",
+			"uk": "Hue Sync Box",
 			"zh-cn": "Hue Sync Box"
 		},
 		"desc": {
@@ -39,6 +41,7 @@
 			"it": "Modello Reagire con Ganci AlCalzone",
 			"es": "Plantilla Reaccionar con ganchos de AlCalzone",
 			"pl": "Szablon React z hakami AlCalzone",
+			"uk": "Шаблон React з хуками AlCalzone",
 			"zh-cn": "模板与 AlCalzone Hooks 反应"
 		},
 		"authors": ["Issi <issi.dev.iobroker@gmail.com>"],
@@ -59,6 +62,7 @@
 		"materialize": true,
 		"tier": 3,
 		"singleton": true,
+		"messagebox": true,
 		"adminUI": {
 			"config": "materialize"
 		},

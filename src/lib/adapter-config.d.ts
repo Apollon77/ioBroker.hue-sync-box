@@ -4,7 +4,7 @@
 declare global {
 	namespace ioBroker {
 		interface Devices {
-			room: string;
+			name: string;
 			ip: string;
 			token: string;
 		}

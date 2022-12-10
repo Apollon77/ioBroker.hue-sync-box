@@ -1,4 +1,4 @@
-// TODO: API https://developers.meethue.com/develop/hue-entertainment/hue-hdmi-sync-box-api/#Device%20Discovery
+// hue-sync-box API https://developers.meethue.com/develop/hue-entertainment/hue-hdmi-sync-box-api/#Device%20Discovery
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 import * as utils from '@iobroker/adapter-core';
@@ -29,11 +29,10 @@ import { replaceFunktion } from './lib/replaceFunktion';
 import { ApiResult } from './interface/apiResult';
 
 // Global variables here
-
+const protocol = 'https';
 class HueSyncBox extends utils.Adapter {
-	private requestTimer: NodeJS.Timeout | null;
+	private requestTimer: ioBroker.Timeout | null;
 	private subscribedStates: string[];
-	private createdData: boolean;
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
 			...options,
@@ -41,11 +40,10 @@ class HueSyncBox extends utils.Adapter {
 		});
 		this.on('ready', this.onReady.bind(this));
 		this.on('stateChange', this.onStateChange.bind(this));
-		// this.on('message', this.onMessage.bind(this));
+		this.on('message', this.onMessage.bind(this));
 		this.on('unload', this.onUnload.bind(this));
 		this.requestTimer = null;
 		this.subscribedStates = [];
-		this.createdData = false;
 	}
 
 	/**
@@ -55,7 +53,9 @@ class HueSyncBox extends utils.Adapter {
 		// Initialize your adapter here
 		// Reset the connection indicator during startup
 		this.setState('info.connection', false, true);
-		this.createdData = false;
+		this.writeLog('create data', 'debug');
+		await this.createStates();
+		this.writeLog('request data', 'debug');
 		await this.request();
 	}
 	//
@@ -64,22 +64,17 @@ class HueSyncBox extends utils.Adapter {
 			for (const devicesKey in this.config.devices) {
 				if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
 					const device = this.config.devices[devicesKey];
-					const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, 'GET');
+					const result = await this.apiCall(`${protocol}://${device.ip}/api/v1`, device.token, 'GET');
 					if (result.status === 200) {
-						// if (!this.createdData) {
-						this.writeLog('create data', 'debug');
-						await this.createStates(device, result);
-						this.createdData = true;
 						this.setState('info.connection', true, true);
-						// }
-						await this.writeState(result, Number(devicesKey));
+						await this.writeState(result, parseInt(devicesKey));
 					}
 				}
 			}
 
 			// timer for request of 15 seconds
-			if (this.requestTimer) clearTimeout(this.requestTimer);
-			this.requestTimer = setTimeout(async () => {
+			if (this.requestTimer) this.clearTimeout(this.requestTimer);
+			this.requestTimer = this.setTimeout(async () => {
 				await this.request();
 			}, 15000);
 		} catch (error) {
@@ -95,7 +90,7 @@ class HueSyncBox extends utils.Adapter {
 				return;
 			}
 			// write state of device
-			this.writeLog(`prepare to write the data for ${this.config.devices[key].room}`, 'debug');
+			this.writeLog(`prepare to write the data for ${this.config.devices[key].name}`, 'debug');
 			for (const [resultKey, resultValue] of Object.entries(data)) {
 				if (typeof resultValue === 'object') {
 					for (const [valueKey, value] of Object.entries(resultValue)) {
@@ -103,7 +98,7 @@ class HueSyncBox extends utils.Adapter {
 							if (resultKey !== 'ir' && resultKey !== 'registrations' && resultKey !== 'presets') {
 								await this.setStateAsync(
 									`box_${await replaceFunktion(
-										this.config.devices[key].room,
+										this.config.devices[key].name,
 									)}.${resultKey}.${valueKey}`,
 									{
 										val: value as any,
@@ -123,7 +118,7 @@ class HueSyncBox extends utils.Adapter {
 											)) {
 												await this.setStateAsync(
 													`box_${await replaceFunktion(
-														this.config.devices[key].room,
+														this.config.devices[key].name,
 													)}.${resultKey}.${valueKey}.${valueObjKey}.${hueGroupKey}`,
 													{
 														val: hueGroupValue as any,
@@ -134,7 +129,7 @@ class HueSyncBox extends utils.Adapter {
 										} else {
 											await this.setStateAsync(
 												`box_${await replaceFunktion(
-													this.config.devices[key].room,
+													this.config.devices[key].name,
 												)}.${resultKey}.${valueKey}.${valueObjKey}`,
 												{
 													val: value[valueObjKey] as any,
@@ -149,7 +144,7 @@ class HueSyncBox extends utils.Adapter {
 					}
 				}
 			}
-			this.writeLog(`all data for ${this.config.devices[key].room} written`, 'debug');
+			this.writeLog(`all data for ${this.config.devices[key].name} written`, 'debug');
 		} catch (error) {
 			this.writeLog(`writeState error: ${error} , stack: ${error.stack}`, 'error');
 		}
@@ -162,7 +157,7 @@ class HueSyncBox extends utils.Adapter {
 				method: method,
 				url: url,
 				headers: {
-					Authorization: `Bearer ${token}`,
+					Authorization: `Bearer ${this.decrypt(token)}`,
 					'Content-Type': 'application/json',
 				},
 				httpsAgent: new https.Agent({ rejectUnauthorized: false }),
@@ -175,7 +170,9 @@ class HueSyncBox extends utils.Adapter {
 			return response;
 		} catch (error) {
 			if (error.response) {
-				if (error.response.status === 401) {
+				if (error.response.status === 400) {
+					this.writeLog(`error: ${error.response.status} ${error.message} - Body malformed.`, 'error');
+				} else if (error.response.status === 401) {
 					this.writeLog(`error: ${error.response.status} ${error.message} - Authentication failed`, 'error');
 					return error.response;
 				} else if (error.response.status === 404) {
@@ -199,7 +196,7 @@ class HueSyncBox extends utils.Adapter {
 			this.writeLog(`prepare to send the command for ${id}`, 'debug');
 
 			// get the room from the id
-			const room = id.split('.')[0].replace('box_', '');
+			const name = id.split('.')[0].replace('box_', '');
 			// get the channel from the id
 			const channel = id.split('.')[1];
 			// get the channel2 from the id
@@ -209,15 +206,18 @@ class HueSyncBox extends utils.Adapter {
 			// get the command from the id
 			const commandWord = id.split('.').pop();
 
-			// find the config for the room in the config
-			const boxConfig = this.config.devices.find(
-				async (boxConfig) => (await replaceFunktion(boxConfig.room)) === room,
-			);
+			let boxConfig = null;
+			for (const devicesKey in this.config.devices) {
+				// find the config for the name in this.config.devices
+				if ((await replaceFunktion(this.config.devices[devicesKey].name)) === name) {
+					boxConfig = this.config.devices[devicesKey];
+				}
+			}
 			this.writeLog(`get the boxConfig: ${JSON.stringify(boxConfig)}`, 'debug');
 
 			// if no config was found, return
 			if (!boxConfig) {
-				this.writeLog(`no boxConfig found for ${room}`, 'error');
+				this.writeLog(`no boxConfig found for ${name}`, 'error');
 				return;
 			}
 
@@ -227,25 +227,27 @@ class HueSyncBox extends utils.Adapter {
 			if (channel3 !== undefined) {
 				// check if the channel3 same as the commandWord
 				if (commandWord === channel3) {
-					url = `https://${boxConfig?.ip}/api/v1/${channel}/${channel2}`;
+					url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
 				} else {
 					// if not, add the channel3 to the url
-					url = `https://${boxConfig?.ip}/api/v1/${channel}/${channel2}/${channel3}`;
+					url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}/${channel3}`;
 				}
 			} else {
 				// check if the commandWord same as the channel2
 				if (commandWord === channel2) {
-					url = `https://${boxConfig?.ip}/api/v1/${channel}`;
+					url = `${protocol}://${boxConfig.ip}/api/v1/${channel}`;
 				} else {
 					// if not, add the channel2 to the url
-					url = `https://${boxConfig?.ip}/api/v1/${channel}/${channel2}`;
+					url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
 				}
 			}
 			this.writeLog(`assemble the url ${url}`, 'debug');
 
 			// send the request
 			this.writeLog(`send the request to ${url}`, 'debug');
-			const response = await this.apiCall(url, boxConfig.token, 'put', { [commandWord as string]: state.val });
+			const response = await this.apiCall(url, boxConfig.token, 'put', {
+				[commandWord as string]: state.val,
+			});
 			// check if the request was successful
 			if (response.status === 200) {
 				this.writeLog(`${id} was changed to ${state.val}`, 'debug');
@@ -256,345 +258,374 @@ class HueSyncBox extends utils.Adapter {
 		}
 	}
 
-	private async createStates(device: ioBroker.Devices | undefined, result: { data: ApiResult }): Promise<void> {
+	private async createStates(): Promise<void> {
 		try {
-			const data = result.data as ApiResult;
-			if (data === undefined) {
-				this.writeLog('no data received', 'error');
-				return;
-			}
-			this.writeLog(`initializing Object creation`, 'debug');
+			for (const key in this.config.devices) {
+				if (Object.prototype.hasOwnProperty.call(this.config.devices, key)) {
+					const result = await this.apiCall(
+						`${protocol}://${this.config.devices[key].ip}/api/v1`,
+						this.config.devices[key].token,
+						'GET',
+					);
 
-			// create the states for the devices
-			if (!device) return this.writeLog(`No devices configured`, 'warn');
+					const data = result.data as ApiResult;
+					if (data === undefined) {
+						this.writeLog('no data received', 'error');
+						return;
+					}
+					this.writeLog(`initializing Object creation`, 'debug');
 
-			// get the current space and replace all special characters, so it can be used as id
-			const room = await replaceFunktion(device.room);
+					// create the states for the devices
+					if (!this.config.devices) return this.writeLog(`No devices configured`, 'warn');
 
-			// create the device
-			this.writeLog(`creating device with Name  box_${await replaceFunktion(room)}`, 'debug');
-			await this.setObjectNotExistsAsync(`box_${await replaceFunktion(room)}`, {
-				type: 'device',
-				common: {
-					name: room,
-				},
-				native: {},
-			});
+					// get the current space and replace all special characters, so it can be used as id
+					const name = await replaceFunktion(this.config.devices[key].name);
 
-			this.writeLog(`creating channel and states for device`, 'debug');
-			// create the channels and states for the device
-			await this.setObjectNotExistsAsync(`box_${await replaceFunktion(room)}.device`, {
-				type: 'channel',
-				common: {
-					name: 'device',
-				},
-				native: {},
-			});
+					// create the device
+					this.writeLog(`creating device with Name  box_${name}`, 'debug');
+					await this.setObjectNotExistsAsync(`box_${name}`, {
+						type: 'device',
+						common: {
+							name: this.config.devices[key].name,
+						},
+						native: {},
+					});
 
-			for (const key in deviceChannelObj) {
-				if (deviceChannelObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.device.${key}`, deviceChannelObj[key]);
-				}
-			}
+					this.writeLog(`creating channel and states for device`, 'debug');
+					// create the channels and states for the device
+					await this.setObjectNotExistsAsync(`box_${name}.device`, {
+						type: 'channel',
+						common: {
+							name: 'device',
+						},
+						native: {},
+					});
 
-			for (const key in deviceStateObj) {
-				if (deviceStateObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.device.${key}`, deviceStateObj[key]);
-					// check if the state may be described
-					if (deviceStateObj[key].common.write) {
-						// check if the state is in subscribedStates
-						if (!this.subscribedStates.includes(`box_${room}.device.${key}`)) {
-							this.writeLog(`subscribe state box_${room}.device.${key}`, 'debug');
-							this.subscribeStates(`box_${room}.device.${key}`);
-							this.subscribedStates.push(`box_${room}.device.${key}`);
+					for (const key in deviceChannelObj) {
+						if (deviceChannelObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.device.${key}`, deviceChannelObj[key]);
 						}
 					}
-				}
-			}
 
-			for (const key in networkObj) {
-				if (networkObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.device.wifi.${key}`, networkObj[key]);
-					// check if the state may be described
-					if (networkObj[key].common.write) {
-						// check if the state is in subscribedStates
-						if (!this.subscribedStates.includes(`box_${room}.device.wifi.${key}`)) {
-							this.writeLog(`subscribe state box_${room}.device.wifi.${key}`, 'debug');
-							this.subscribeStates(`box_${room}.device.wifi.${key}`);
-							this.subscribedStates.push(`box_${room}.device.wifi.${key}`);
-						}
-					}
-				}
-			}
-			for (const key in updateObj) {
-				if (updateObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.device.update.${key}`, updateObj[key]);
-					// check if the state may be described
-					if (updateObj[key].common.write) {
-						// check if the state is in subscribedStates
-						if (!this.subscribedStates.includes(`box_${room}.device.update.${key}`)) {
-							this.writeLog(`subscribe state box_${room}.device.update.${key}`, 'debug');
-							this.subscribeStates(`box_${room}.device.update.${key}`);
-							this.subscribedStates.push(`box_${room}.device.update.${key}`);
-						}
-					}
-				}
-			}
-			for (const key in capabilitiesObj) {
-				if (capabilitiesObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.device.capabilities.${key}`, capabilitiesObj[key]);
-					// check if the state may be described
-					if (capabilitiesObj[key].common.write) {
-						// check if the state is in subscribedStates
-						if (!this.subscribedStates.includes(`box_${room}.device.capabilities.${key}`)) {
-							this.writeLog(`subscribe state box_${room}.device.capabilities.${key}`, 'debug');
-							this.subscribeStates(`box_${room}.device.capabilities.${key}`);
-							this.subscribedStates.push(`box_${room}.device.capabilities.${key}`);
-						}
-					}
-				}
-			}
-
-			this.writeLog(`creating channel and states for hue`, 'debug');
-			await this.setObjectNotExistsAsync(`box_${room}.hue`, {
-				type: 'channel',
-				common: {
-					name: 'hue',
-				},
-				native: {},
-			});
-
-			for (const key in hueChannelObj) {
-				if (hueChannelObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.hue.${key}`, hueChannelObj[key]);
-				}
-			}
-
-			for (const key in hueObj) {
-				if (hueObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.hue.${key}`, hueObj[key]);
-					// check if the state may be described
-					if (hueObj[key].common.write) {
-						// check if the state is in subscribedStates
-						if (!this.subscribedStates.includes(`box_${room}.hue.${key}`)) {
-							this.writeLog(`subscribe state box_${room}.hue.${key}`, 'debug');
-							this.subscribeStates(`box_${room}.hue.${key}`);
-							this.subscribedStates.push(`box_${room}.hue.${key}`);
-						}
-					}
-				}
-			}
-			for (const groupKey in data.hue.groups) {
-				for (const key in groupsObj) {
-					if (groupsObj.hasOwnProperty(key)) {
-						await this.setObjectNotExistsAsync(`box_${room}.hue.groups.${groupKey}.${key}`, groupsObj[key]);
-						// check if the state may be described
-						if (groupsObj[key].common.write) {
-							// check if the state is in subscribedStates
-							if (!this.subscribedStates.includes(`box_${room}.hue.groups.${groupKey}.${key}`)) {
-								this.writeLog(`subscribe state box_${room}.hue.groups.${groupKey}.${key}`, 'debug');
-								this.subscribeStates(`box_${room}.hue.groups.${groupKey}.${key}`);
-								this.subscribedStates.push(`box_${room}.hue.groups.${groupKey}.${key}`);
-							}
-						}
-					}
-				}
-			}
-
-			this.writeLog(`creating channel and states for execution`, 'debug');
-			await this.setObjectNotExistsAsync(`box_${room}.execution`, {
-				type: 'channel',
-				common: {
-					name: 'execution',
-				},
-				native: {},
-			});
-
-			for (const key in executionChannelObj) {
-				if (executionChannelObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.execution.${key}`, executionChannelObj[key]);
-				}
-			}
-
-			for (const key in executionObj) {
-				if (executionObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.execution.${key}`, executionObj[key]);
-					// check if the state may be described
-					if (executionObj[key].common.write) {
-						// check if the state is in subscribedStates
-						if (!this.subscribedStates.includes(`box_${room}.execution.${key}`)) {
-							this.writeLog(`subscribe state box_${room}.execution.${key}`, 'debug');
-							this.subscribeStates(`box_${room}.execution.${key}`);
-							this.subscribedStates.push(`box_${room}.execution.${key}`);
-						}
-					}
-				}
-			}
-			const array = ['game', 'music', 'video'];
-			for (const arrayKey in array) {
-				if (array.hasOwnProperty(arrayKey)) {
-					if (array[arrayKey] !== 'music') {
-						for (const key in video_gameObj) {
-							if (video_gameObj.hasOwnProperty(key)) {
-								await this.setObjectNotExistsAsync(
-									`box_${room}.execution.${array[arrayKey]}.${key}`,
-									video_gameObj[key],
-								);
-								// check if the state may be described
-								if (video_gameObj[key].common.write) {
-									// check if the state is in subscribedStates
-									if (
-										!this.subscribedStates.includes(
-											`box_${room}.execution.${array[arrayKey]}.${key}`,
-										)
-									) {
-										this.writeLog(
-											`subscribe state box_${room}.execution.${array[arrayKey]}.${key}`,
-											'debug',
-										);
-										this.subscribeStates(`box_${room}.execution.${array[arrayKey]}.${key}`);
-										this.subscribedStates.push(`box_${room}.execution.${array[arrayKey]}.${key}`);
-									}
+					for (const key in deviceStateObj) {
+						if (deviceStateObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.device.${key}`, deviceStateObj[key]);
+							// check if the state may be described
+							if (deviceStateObj[key].common.write) {
+								// check if the state is in subscribedStates
+								if (!this.subscribedStates.includes(`box_${name}.device.${key}`)) {
+									this.writeLog(`subscribe state box_${name}.device.${key}`, 'debug');
+									this.subscribeStates(`box_${name}.device.${key}`);
+									this.subscribedStates.push(`box_${name}.device.${key}`);
 								}
 							}
 						}
-					} else {
-						for (const key in musicObj) {
-							if (musicObj.hasOwnProperty(key)) {
+					}
+
+					for (const key in networkObj) {
+						if (networkObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.device.wifi.${key}`, networkObj[key]);
+							// check if the state may be described
+							if (networkObj[key].common.write) {
+								// check if the state is in subscribedStates
+								if (!this.subscribedStates.includes(`box_${name}.device.wifi.${key}`)) {
+									this.writeLog(`subscribe state box_${name}.device.wifi.${key}`, 'debug');
+									this.subscribeStates(`box_${name}.device.wifi.${key}`);
+									this.subscribedStates.push(`box_${name}.device.wifi.${key}`);
+								}
+							}
+						}
+					}
+					for (const key in updateObj) {
+						if (updateObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.device.update.${key}`, updateObj[key]);
+							// check if the state may be described
+							if (updateObj[key].common.write) {
+								// check if the state is in subscribedStates
+								if (!this.subscribedStates.includes(`box_${name}.device.update.${key}`)) {
+									this.writeLog(`subscribe state box_${name}.device.update.${key}`, 'debug');
+									this.subscribeStates(`box_${name}.device.update.${key}`);
+									this.subscribedStates.push(`box_${name}.device.update.${key}`);
+								}
+							}
+						}
+					}
+					for (const key in capabilitiesObj) {
+						if (capabilitiesObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(
+								`box_${name}.device.capabilities.${key}`,
+								capabilitiesObj[key],
+							);
+							// check if the state may be described
+							if (capabilitiesObj[key].common.write) {
+								// check if the state is in subscribedStates
+								if (!this.subscribedStates.includes(`box_${name}.device.capabilities.${key}`)) {
+									this.writeLog(`subscribe state box_${name}.device.capabilities.${key}`, 'debug');
+									this.subscribeStates(`box_${name}.device.capabilities.${key}`);
+									this.subscribedStates.push(`box_${name}.device.capabilities.${key}`);
+								}
+							}
+						}
+					}
+
+					this.writeLog(`creating channel and states for hue`, 'debug');
+					await this.setObjectNotExistsAsync(`box_${name}.hue`, {
+						type: 'channel',
+						common: {
+							name: 'hue',
+						},
+						native: {},
+					});
+
+					for (const key in hueChannelObj) {
+						if (hueChannelObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.hue.${key}`, hueChannelObj[key]);
+						}
+					}
+
+					for (const key in hueObj) {
+						if (hueObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.hue.${key}`, hueObj[key]);
+							// check if the state may be described
+							if (hueObj[key].common.write) {
+								// check if the state is in subscribedStates
+								if (!this.subscribedStates.includes(`box_${name}.hue.${key}`)) {
+									this.writeLog(`subscribe state box_${name}.hue.${key}`, 'debug');
+									this.subscribeStates(`box_${name}.hue.${key}`);
+									this.subscribedStates.push(`box_${name}.hue.${key}`);
+								}
+							}
+						}
+					}
+					for (const groupKey in data.hue.groups) {
+						for (const key in groupsObj) {
+							if (groupsObj.hasOwnProperty(key)) {
 								await this.setObjectNotExistsAsync(
-									`box_${room}.execution.${array[arrayKey]}.${key}`,
-									musicObj[key],
+									`box_${name}.hue.groups.${groupKey}.${key}`,
+									groupsObj[key],
 								);
 								// check if the state may be described
-								if (musicObj[key].common.write) {
+								if (groupsObj[key].common.write) {
 									// check if the state is in subscribedStates
-									if (
-										!this.subscribedStates.includes(
-											`box_${room}.execution.${array[arrayKey]}.${key}`,
-										)
-									) {
+									if (!this.subscribedStates.includes(`box_${name}.hue.groups.${groupKey}.${key}`)) {
 										this.writeLog(
-											`subscribe state box_${room}.execution.${array[arrayKey]}.${key}`,
+											`subscribe state box_${name}.hue.groups.${groupKey}.${key}`,
 											'debug',
 										);
-										this.subscribeStates(`box_${room}.execution.${array[arrayKey]}.${key}`);
-										this.subscribedStates.push(`box_${room}.execution.${array[arrayKey]}.${key}`);
+										this.subscribeStates(`box_${name}.hue.groups.${groupKey}.${key}`);
+										this.subscribedStates.push(`box_${name}.hue.groups.${groupKey}.${key}`);
 									}
 								}
 							}
 						}
 					}
-				}
-			}
 
-			this.writeLog(`creating channel and states for hdmi`, 'debug');
-			await this.setObjectNotExistsAsync(`box_${room}.hdmi`, {
-				type: 'channel',
-				common: {
-					name: 'hdmi',
-				},
-				native: {},
-			});
+					this.writeLog(`creating channel and states for execution`, 'debug');
+					await this.setObjectNotExistsAsync(`box_${name}.execution`, {
+						type: 'channel',
+						common: {
+							name: 'execution',
+						},
+						native: {},
+					});
 
-			for (const key in hdmiChannelObj) {
-				if (hdmiChannelObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.hdmi.${key}`, hdmiChannelObj[key]);
-				}
-			}
-
-			for (const key in hdmiObj) {
-				if (hdmiObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.hdmi.${key}`, hdmiObj[key]);
-					// check if the state may be described
-					if (hdmiObj[key].common.write) {
-						// check if the state is in subscribedStates
-						if (!this.subscribedStates.includes(`box_${room}.hdmi.${key}`)) {
-							this.writeLog(`subscribe state box_${room}.hdmi.${key}`, 'debug');
-							this.subscribeStates(`box_${room}.hdmi.${key}`);
-							this.subscribedStates.push(`box_${room}.hdmi.${key}`);
+					for (const key in executionChannelObj) {
+						if (executionChannelObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(
+								`box_${name}.execution.${key}`,
+								executionChannelObj[key],
+							);
 						}
 					}
-				}
-			}
 
-			for (const key in hdmiInputObj) {
-				if (hdmiInputObj.hasOwnProperty(key)) {
-					for (let i = 1; i < 5; i++) {
-						await this.setObjectNotExistsAsync(`box_${room}.hdmi.input${i}.${key}`, hdmiInputObj[key]);
+					for (const key in executionObj) {
+						if (executionObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.execution.${key}`, executionObj[key]);
+							// check if the state may be described
+							if (executionObj[key].common.write) {
+								// check if the state is in subscribedStates
+								if (!this.subscribedStates.includes(`box_${name}.execution.${key}`)) {
+									this.writeLog(`subscribe state box_${name}.execution.${key}`, 'debug');
+									this.subscribeStates(`box_${name}.execution.${key}`);
+									this.subscribedStates.push(`box_${name}.execution.${key}`);
+								}
+							}
+						}
+					}
+					const array = ['game', 'music', 'video'];
+					for (const arrayKey in array) {
+						if (array.hasOwnProperty(arrayKey)) {
+							if (array[arrayKey] !== 'music') {
+								for (const key in video_gameObj) {
+									if (video_gameObj.hasOwnProperty(key)) {
+										await this.setObjectNotExistsAsync(
+											`box_${name}.execution.${array[arrayKey]}.${key}`,
+											video_gameObj[key],
+										);
+										// check if the state may be described
+										if (video_gameObj[key].common.write) {
+											// check if the state is in subscribedStates
+											if (
+												!this.subscribedStates.includes(
+													`box_${name}.execution.${array[arrayKey]}.${key}`,
+												)
+											) {
+												this.writeLog(
+													`subscribe state box_${name}.execution.${array[arrayKey]}.${key}`,
+													'debug',
+												);
+												this.subscribeStates(`box_${name}.execution.${array[arrayKey]}.${key}`);
+												this.subscribedStates.push(
+													`box_${name}.execution.${array[arrayKey]}.${key}`,
+												);
+											}
+										}
+									}
+								}
+							} else {
+								for (const key in musicObj) {
+									if (musicObj.hasOwnProperty(key)) {
+										await this.setObjectNotExistsAsync(
+											`box_${name}.execution.${array[arrayKey]}.${key}`,
+											musicObj[key],
+										);
+										// check if the state may be described
+										if (musicObj[key].common.write) {
+											// check if the state is in subscribedStates
+											if (
+												!this.subscribedStates.includes(
+													`box_${name}.execution.${array[arrayKey]}.${key}`,
+												)
+											) {
+												this.writeLog(
+													`subscribe state box_${name}.execution.${array[arrayKey]}.${key}`,
+													'debug',
+												);
+												this.subscribeStates(`box_${name}.execution.${array[arrayKey]}.${key}`);
+												this.subscribedStates.push(
+													`box_${name}.execution.${array[arrayKey]}.${key}`,
+												);
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+
+					this.writeLog(`creating channel and states for hdmi`, 'debug');
+					await this.setObjectNotExistsAsync(`box_${name}.hdmi`, {
+						type: 'channel',
+						common: {
+							name: 'hdmi',
+						},
+						native: {},
+					});
+
+					for (const key in hdmiChannelObj) {
+						if (hdmiChannelObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.hdmi.${key}`, hdmiChannelObj[key]);
+						}
+					}
+
+					for (const key in hdmiObj) {
+						if (hdmiObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.hdmi.${key}`, hdmiObj[key]);
+							// check if the state may be described
+							if (hdmiObj[key].common.write) {
+								// check if the state is in subscribedStates
+								if (!this.subscribedStates.includes(`box_${name}.hdmi.${key}`)) {
+									this.writeLog(`subscribe state box_${name}.hdmi.${key}`, 'debug');
+									this.subscribeStates(`box_${name}.hdmi.${key}`);
+									this.subscribedStates.push(`box_${name}.hdmi.${key}`);
+								}
+							}
+						}
+					}
+
+					for (const key in hdmiInputObj) {
+						if (hdmiInputObj.hasOwnProperty(key)) {
+							for (let i = 1; i < 5; i++) {
+								await this.setObjectNotExistsAsync(
+									`box_${name}.hdmi.input${i}.${key}`,
+									hdmiInputObj[key],
+								);
+								// check if the state may be described
+								if (hdmiInputObj[key].common.write) {
+									// check if the state is in subscribedStates
+									if (!this.subscribedStates.includes(`box_${name}.hdmi.input${i}.${key}`)) {
+										this.writeLog(`subscribe state box_${name}.hdmi.input${i}.${key}`, 'debug');
+										this.subscribeStates(`box_${name}.hdmi.input${i}.${key}`);
+										this.subscribedStates.push(`box_${name}.hdmi.input${i}.${key}`);
+									}
+								}
+							}
+						}
+						await this.setObjectNotExistsAsync(`box_${name}.hdmi.output.${key}`, hdmiInputObj[key]);
 						// check if the state may be described
 						if (hdmiInputObj[key].common.write) {
 							// check if the state is in subscribedStates
-							if (!this.subscribedStates.includes(`box_${room}.hdmi.input${i}.${key}`)) {
-								this.writeLog(`subscribe state box_${room}.hdmi.input${i}.${key}`, 'debug');
-								this.subscribeStates(`box_${room}.hdmi.input${i}.${key}`);
-								this.subscribedStates.push(`box_${room}.hdmi.input${i}.${key}`);
+							if (!this.subscribedStates.includes(`box_${name}.hdmi.output.${key}`)) {
+								this.writeLog(`subscribe state box_${name}.hdmi.output.${key}`, 'debug');
+								this.subscribeStates(`box_${name}.hdmi.output.${key}`);
+								this.subscribedStates.push(`box_${name}.hdmi.output.${key}`);
 							}
 						}
 					}
-				}
-				await this.setObjectNotExistsAsync(`box_${room}.hdmi.output.${key}`, hdmiInputObj[key]);
-				// check if the state may be described
-				if (hdmiInputObj[key].common.write) {
-					// check if the state is in subscribedStates
-					if (!this.subscribedStates.includes(`box_${room}.hdmi.output.${key}`)) {
-						this.writeLog(`subscribe state box_${room}.hdmi.output.${key}`, 'debug');
-						this.subscribeStates(`box_${room}.hdmi.output.${key}`);
-						this.subscribedStates.push(`box_${room}.hdmi.output.${key}`);
-					}
-				}
-			}
 
-			this.writeLog(`creating channel and states for behavior`, 'debug');
-			await this.setObjectNotExistsAsync(`box_${room}.behavior`, {
-				type: 'channel',
-				common: {
-					name: 'behavior',
-				},
-				native: {},
-			});
+					this.writeLog(`creating channel and states for behavior`, 'debug');
+					await this.setObjectNotExistsAsync(`box_${name}.behavior`, {
+						type: 'channel',
+						common: {
+							name: 'behavior',
+						},
+						native: {},
+					});
 
-			for (const key in behaviorChannelObj) {
-				if (behaviorChannelObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.behavior.${key}`, behaviorChannelObj[key]);
-				}
-			}
-
-			for (const key in behaviorObj) {
-				if (behaviorObj.hasOwnProperty(key)) {
-					await this.setObjectNotExistsAsync(`box_${room}.behavior.${key}`, behaviorObj[key]);
-					// check if the state may be described
-					if (behaviorObj[key].common.write) {
-						// check if the state is in subscribedStates
-						if (!this.subscribedStates.includes(`box_${room}.behavior.${key}`)) {
-							this.writeLog(`subscribe state box_${room}.behavior.${key}`, 'debug');
-							this.subscribeStates(`box_${room}.behavior.${key}`);
-							this.subscribedStates.push(`box_${room}.behavior.${key}`);
+					for (const key in behaviorChannelObj) {
+						if (behaviorChannelObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.behavior.${key}`, behaviorChannelObj[key]);
 						}
 					}
-				}
-			}
 
-			for (const key in behaviorInputObj) {
-				if (behaviorInputObj.hasOwnProperty(key)) {
-					for (let i = 1; i < 5; i++) {
-						await this.setObjectNotExistsAsync(
-							`box_${room}.behavior.input${i}.${key}`,
-							behaviorInputObj[key],
-						);
-						// check if the state may be described
-						if (behaviorInputObj[key].common.write) {
-							// check if the state is in subscribedStates
-							if (!this.subscribedStates.includes(`box_${room}.behavior.input${i}.${key}`)) {
-								this.writeLog(`subscribe state box_${room}.behavior.input${i}.${key}`, 'debug');
-								this.subscribeStates(`box_${room}.behavior.input${i}.${key}`);
-								this.subscribedStates.push(`box_${room}.behavior.input${i}.${key}`);
+					for (const key in behaviorObj) {
+						if (behaviorObj.hasOwnProperty(key)) {
+							await this.setObjectNotExistsAsync(`box_${name}.behavior.${key}`, behaviorObj[key]);
+							// check if the state may be described
+							if (behaviorObj[key].common.write) {
+								// check if the state is in subscribedStates
+								if (!this.subscribedStates.includes(`box_${name}.behavior.${key}`)) {
+									this.writeLog(`subscribe state box_${name}.behavior.${key}`, 'debug');
+									this.subscribeStates(`box_${name}.behavior.${key}`);
+									this.subscribedStates.push(`box_${name}.behavior.${key}`);
+								}
 							}
 						}
 					}
+
+					for (const key in behaviorInputObj) {
+						if (behaviorInputObj.hasOwnProperty(key)) {
+							for (let i = 1; i < 5; i++) {
+								await this.setObjectNotExistsAsync(
+									`box_${name}.behavior.input${i}.${key}`,
+									behaviorInputObj[key],
+								);
+								// check if the state may be described
+								if (behaviorInputObj[key].common.write) {
+									// check if the state is in subscribedStates
+									if (!this.subscribedStates.includes(`box_${name}.behavior.input${i}.${key}`)) {
+										this.writeLog(`subscribe state box_${name}.behavior.input${i}.${key}`, 'debug');
+										this.subscribeStates(`box_${name}.behavior.input${i}.${key}`);
+										this.subscribedStates.push(`box_${name}.behavior.input${i}.${key}`);
+									}
+								}
+							}
+						}
+					}
+
+					this.writeLog(`all device / channel and states were created for ${name}`, 'debug');
 				}
 			}
-
-			this.writeLog(`all device / channel and states were created for ${room}`, 'debug');
 		} catch (error) {
 			this.writeLog(`[createObjects] ${error.message} Stack: ${error.stack}`, 'error');
 		}
@@ -606,7 +637,7 @@ class HueSyncBox extends utils.Adapter {
 	private onUnload(callback: () => void): void {
 		try {
 			// Here you must clear all timeouts or intervals that may still be active
-			if (this.requestTimer) clearTimeout(this.requestTimer);
+			if (this.requestTimer) this.clearTimeout(this.requestTimer);
 			this.setState('info.connection', false, true);
 			callback();
 		} catch (e) {
@@ -637,6 +668,7 @@ class HueSyncBox extends utils.Adapter {
 			// console.log('state: ', state);
 			if (state.from === 'system.adapter.' + this.namespace) {
 				// ignore the state change from the adapter itself
+
 				return;
 			} else {
 				this.writeLog(`state ${id} changed: ${state.val} (ack = ${state.ack})`, 'debug');
@@ -659,17 +691,27 @@ class HueSyncBox extends utils.Adapter {
 	//  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
 	//  * Using this method requires "common.messagebox" property to be set to true in io-package.json
 	//  */
-	// private onMessage(obj: ioBroker.Message): void {
-	// 	if (typeof obj === 'object' && obj.message) {
-	// 		if (obj.command === 'send') {
-	// 			// e.g. send email or pushover or whatever
-	// 			this.log.info('send command');
-
-	// 			// Send response in callback if required
-	// 			if (obj.callback) this.sendTo(obj.from, obj.command, 'Message received', obj.callback);
-	// 		}
-	// 	}
-	// }
+	private async onMessage(obj: ioBroker.Message): Promise<void> {
+		if (typeof obj === 'object' && obj.message) {
+			if (obj.command === 'registrations') {
+				try {
+					this.writeLog('start registrations', 'info');
+					const device = obj.message as { ip: string; name: string };
+					device.ip = 'localhost:3000';
+					const registrationsUrl = `${protocol}://${device.ip}/api/v1/registrations`;
+					const registrations = await axios.post(registrationsUrl, {
+						headers: {
+							contentType: 'application/json',
+						},
+						data: { appName: 'ioBroker', instanceName: `hue_sync_box_${device.name}` },
+					});
+					if (obj.callback) this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
+				} catch (error) {
+					this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, 'error');
+				}
+			}
+		}
+	}
 }
 
 if (require.main !== module) {

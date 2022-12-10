@@ -22,6 +22,7 @@ var import_object_definition = require("./lib/object_definition");
 var https = __toESM(require("https"));
 var import_axios = __toESM(require("axios"));
 var import_replaceFunktion = require("./lib/replaceFunktion");
+const protocol = "https";
 class HueSyncBox extends utils.Adapter {
   constructor(options = {}) {
     super({
@@ -30,14 +31,16 @@ class HueSyncBox extends utils.Adapter {
     });
     this.on("ready", this.onReady.bind(this));
     this.on("stateChange", this.onStateChange.bind(this));
+    this.on("message", this.onMessage.bind(this));
     this.on("unload", this.onUnload.bind(this));
     this.requestTimer = null;
     this.subscribedStates = [];
-    this.createdData = false;
   }
   async onReady() {
     this.setState("info.connection", false, true);
-    this.createdData = false;
+    this.writeLog("create data", "debug");
+    await this.createStates();
+    this.writeLog("request data", "debug");
     await this.request();
   }
   async request() {
@@ -45,19 +48,16 @@ class HueSyncBox extends utils.Adapter {
       for (const devicesKey in this.config.devices) {
         if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
           const device = this.config.devices[devicesKey];
-          const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, "GET");
+          const result = await this.apiCall(`${protocol}://${device.ip}/api/v1`, device.token, "GET");
           if (result.status === 200) {
-            this.writeLog("create data", "debug");
-            await this.createStates(device, result);
-            this.createdData = true;
             this.setState("info.connection", true, true);
-            await this.writeState(result, Number(devicesKey));
+            await this.writeState(result, parseInt(devicesKey));
           }
         }
       }
       if (this.requestTimer)
-        clearTimeout(this.requestTimer);
-      this.requestTimer = setTimeout(async () => {
+        this.clearTimeout(this.requestTimer);
+      this.requestTimer = this.setTimeout(async () => {
         await this.request();
       }, 15e3);
     } catch (error) {
@@ -71,7 +71,7 @@ class HueSyncBox extends utils.Adapter {
         this.writeLog("no data received", "error");
         return;
       }
-      this.writeLog(`prepare to write the data for ${this.config.devices[key].room}`, "debug");
+      this.writeLog(`prepare to write the data for ${this.config.devices[key].name}`, "debug");
       for (const [resultKey, resultValue] of Object.entries(data)) {
         if (typeof resultValue === "object") {
           for (const [valueKey, value] of Object.entries(resultValue)) {
@@ -79,7 +79,7 @@ class HueSyncBox extends utils.Adapter {
               if (resultKey !== "ir" && resultKey !== "registrations" && resultKey !== "presets") {
                 await this.setStateAsync(
                   `box_${await (0, import_replaceFunktion.replaceFunktion)(
-                    this.config.devices[key].room
+                    this.config.devices[key].name
                   )}.${resultKey}.${valueKey}`,
                   {
                     val: value,
@@ -98,7 +98,7 @@ class HueSyncBox extends utils.Adapter {
                       )) {
                         await this.setStateAsync(
                           `box_${await (0, import_replaceFunktion.replaceFunktion)(
-                            this.config.devices[key].room
+                            this.config.devices[key].name
                           )}.${resultKey}.${valueKey}.${valueObjKey}.${hueGroupKey}`,
                           {
                             val: hueGroupValue,
@@ -109,7 +109,7 @@ class HueSyncBox extends utils.Adapter {
                     } else {
                       await this.setStateAsync(
                         `box_${await (0, import_replaceFunktion.replaceFunktion)(
-                          this.config.devices[key].room
+                          this.config.devices[key].name
                         )}.${resultKey}.${valueKey}.${valueObjKey}`,
                         {
                           val: value[valueObjKey],
@@ -124,7 +124,7 @@ class HueSyncBox extends utils.Adapter {
           }
         }
       }
-      this.writeLog(`all data for ${this.config.devices[key].room} written`, "debug");
+      this.writeLog(`all data for ${this.config.devices[key].name} written`, "debug");
     } catch (error) {
       this.writeLog(`writeState error: ${error} , stack: ${error.stack}`, "error");
     }
@@ -135,7 +135,7 @@ class HueSyncBox extends utils.Adapter {
         method,
         url,
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${this.decrypt(token)}`,
           "Content-Type": "application/json"
         },
         httpsAgent: new https.Agent({ rejectUnauthorized: false }),
@@ -146,7 +146,9 @@ class HueSyncBox extends utils.Adapter {
       return response;
     } catch (error) {
       if (error.response) {
-        if (error.response.status === 401) {
+        if (error.response.status === 400) {
+          this.writeLog(`error: ${error.response.status} ${error.message} - Body malformed.`, "error");
+        } else if (error.response.status === 401) {
           this.writeLog(`error: ${error.response.status} ${error.message} - Authentication failed`, "error");
           return error.response;
         } else if (error.response.status === 404) {
@@ -167,36 +169,41 @@ class HueSyncBox extends utils.Adapter {
   async sendCommand(id, state) {
     try {
       this.writeLog(`prepare to send the command for ${id}`, "debug");
-      const room = id.split(".")[0].replace("box_", "");
+      const name = id.split(".")[0].replace("box_", "");
       const channel = id.split(".")[1];
       const channel2 = id.split(".")[2];
       const channel3 = id.split(".")[3];
       const commandWord = id.split(".").pop();
-      const boxConfig = this.config.devices.find(
-        async (boxConfig2) => await (0, import_replaceFunktion.replaceFunktion)(boxConfig2.room) === room
-      );
+      let boxConfig = null;
+      for (const devicesKey in this.config.devices) {
+        if (await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[devicesKey].name) === name) {
+          boxConfig = this.config.devices[devicesKey];
+        }
+      }
       this.writeLog(`get the boxConfig: ${JSON.stringify(boxConfig)}`, "debug");
       if (!boxConfig) {
-        this.writeLog(`no boxConfig found for ${room}`, "error");
+        this.writeLog(`no boxConfig found for ${name}`, "error");
         return;
       }
       let url;
       if (channel3 !== void 0) {
         if (commandWord === channel3) {
-          url = `https://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}`;
+          url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
         } else {
-          url = `https://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}/${channel3}`;
+          url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}/${channel3}`;
         }
       } else {
         if (commandWord === channel2) {
-          url = `https://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}`;
+          url = `${protocol}://${boxConfig.ip}/api/v1/${channel}`;
         } else {
-          url = `https://${boxConfig == null ? void 0 : boxConfig.ip}/api/v1/${channel}/${channel2}`;
+          url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
         }
       }
       this.writeLog(`assemble the url ${url}`, "debug");
       this.writeLog(`send the request to ${url}`, "debug");
-      const response = await this.apiCall(url, boxConfig.token, "put", { [commandWord]: state.val });
+      const response = await this.apiCall(url, boxConfig.token, "put", {
+        [commandWord]: state.val
+      });
       if (response.status === 200) {
         this.writeLog(`${id} was changed to ${state.val}`, "debug");
         await this.setStateAsync(id, state.val, true);
@@ -205,288 +212,316 @@ class HueSyncBox extends utils.Adapter {
       this.writeLog(`[sendCommand] ${error.message} Stack: ${error.stack}`, "error");
     }
   }
-  async createStates(device, result) {
+  async createStates() {
     try {
-      const data = result.data;
-      if (data === void 0) {
-        this.writeLog("no data received", "error");
-        return;
-      }
-      this.writeLog(`initializing Object creation`, "debug");
-      if (!device)
-        return this.writeLog(`No devices configured`, "warn");
-      const room = await (0, import_replaceFunktion.replaceFunktion)(device.room);
-      this.writeLog(`creating device with Name  box_${await (0, import_replaceFunktion.replaceFunktion)(room)}`, "debug");
-      await this.setObjectNotExistsAsync(`box_${await (0, import_replaceFunktion.replaceFunktion)(room)}`, {
-        type: "device",
-        common: {
-          name: room
-        },
-        native: {}
-      });
-      this.writeLog(`creating channel and states for device`, "debug");
-      await this.setObjectNotExistsAsync(`box_${await (0, import_replaceFunktion.replaceFunktion)(room)}.device`, {
-        type: "channel",
-        common: {
-          name: "device"
-        },
-        native: {}
-      });
-      for (const key in import_object_definition.deviceChannelObj) {
-        if (import_object_definition.deviceChannelObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.device.${key}`, import_object_definition.deviceChannelObj[key]);
-        }
-      }
-      for (const key in import_object_definition.deviceStateObj) {
-        if (import_object_definition.deviceStateObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.device.${key}`, import_object_definition.deviceStateObj[key]);
-          if (import_object_definition.deviceStateObj[key].common.write) {
-            if (!this.subscribedStates.includes(`box_${room}.device.${key}`)) {
-              this.writeLog(`subscribe state box_${room}.device.${key}`, "debug");
-              this.subscribeStates(`box_${room}.device.${key}`);
-              this.subscribedStates.push(`box_${room}.device.${key}`);
+      for (const key in this.config.devices) {
+        if (Object.prototype.hasOwnProperty.call(this.config.devices, key)) {
+          const result = await this.apiCall(
+            `${protocol}://${this.config.devices[key].ip}/api/v1`,
+            this.config.devices[key].token,
+            "GET"
+          );
+          const data = result.data;
+          if (data === void 0) {
+            this.writeLog("no data received", "error");
+            return;
+          }
+          this.writeLog(`initializing Object creation`, "debug");
+          if (!this.config.devices)
+            return this.writeLog(`No devices configured`, "warn");
+          const name = await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[key].name);
+          this.writeLog(`creating device with Name  box_${name}`, "debug");
+          await this.setObjectNotExistsAsync(`box_${name}`, {
+            type: "device",
+            common: {
+              name: this.config.devices[key].name
+            },
+            native: {}
+          });
+          this.writeLog(`creating channel and states for device`, "debug");
+          await this.setObjectNotExistsAsync(`box_${name}.device`, {
+            type: "channel",
+            common: {
+              name: "device"
+            },
+            native: {}
+          });
+          for (const key2 in import_object_definition.deviceChannelObj) {
+            if (import_object_definition.deviceChannelObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.device.${key2}`, import_object_definition.deviceChannelObj[key2]);
             }
           }
-        }
-      }
-      for (const key in import_object_definition.networkObj) {
-        if (import_object_definition.networkObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.device.wifi.${key}`, import_object_definition.networkObj[key]);
-          if (import_object_definition.networkObj[key].common.write) {
-            if (!this.subscribedStates.includes(`box_${room}.device.wifi.${key}`)) {
-              this.writeLog(`subscribe state box_${room}.device.wifi.${key}`, "debug");
-              this.subscribeStates(`box_${room}.device.wifi.${key}`);
-              this.subscribedStates.push(`box_${room}.device.wifi.${key}`);
-            }
-          }
-        }
-      }
-      for (const key in import_object_definition.updateObj) {
-        if (import_object_definition.updateObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.device.update.${key}`, import_object_definition.updateObj[key]);
-          if (import_object_definition.updateObj[key].common.write) {
-            if (!this.subscribedStates.includes(`box_${room}.device.update.${key}`)) {
-              this.writeLog(`subscribe state box_${room}.device.update.${key}`, "debug");
-              this.subscribeStates(`box_${room}.device.update.${key}`);
-              this.subscribedStates.push(`box_${room}.device.update.${key}`);
-            }
-          }
-        }
-      }
-      for (const key in import_object_definition.capabilitiesObj) {
-        if (import_object_definition.capabilitiesObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.device.capabilities.${key}`, import_object_definition.capabilitiesObj[key]);
-          if (import_object_definition.capabilitiesObj[key].common.write) {
-            if (!this.subscribedStates.includes(`box_${room}.device.capabilities.${key}`)) {
-              this.writeLog(`subscribe state box_${room}.device.capabilities.${key}`, "debug");
-              this.subscribeStates(`box_${room}.device.capabilities.${key}`);
-              this.subscribedStates.push(`box_${room}.device.capabilities.${key}`);
-            }
-          }
-        }
-      }
-      this.writeLog(`creating channel and states for hue`, "debug");
-      await this.setObjectNotExistsAsync(`box_${room}.hue`, {
-        type: "channel",
-        common: {
-          name: "hue"
-        },
-        native: {}
-      });
-      for (const key in import_object_definition.hueChannelObj) {
-        if (import_object_definition.hueChannelObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.hue.${key}`, import_object_definition.hueChannelObj[key]);
-        }
-      }
-      for (const key in import_object_definition.hueObj) {
-        if (import_object_definition.hueObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.hue.${key}`, import_object_definition.hueObj[key]);
-          if (import_object_definition.hueObj[key].common.write) {
-            if (!this.subscribedStates.includes(`box_${room}.hue.${key}`)) {
-              this.writeLog(`subscribe state box_${room}.hue.${key}`, "debug");
-              this.subscribeStates(`box_${room}.hue.${key}`);
-              this.subscribedStates.push(`box_${room}.hue.${key}`);
-            }
-          }
-        }
-      }
-      for (const groupKey in data.hue.groups) {
-        for (const key in import_object_definition.groupsObj) {
-          if (import_object_definition.groupsObj.hasOwnProperty(key)) {
-            await this.setObjectNotExistsAsync(`box_${room}.hue.groups.${groupKey}.${key}`, import_object_definition.groupsObj[key]);
-            if (import_object_definition.groupsObj[key].common.write) {
-              if (!this.subscribedStates.includes(`box_${room}.hue.groups.${groupKey}.${key}`)) {
-                this.writeLog(`subscribe state box_${room}.hue.groups.${groupKey}.${key}`, "debug");
-                this.subscribeStates(`box_${room}.hue.groups.${groupKey}.${key}`);
-                this.subscribedStates.push(`box_${room}.hue.groups.${groupKey}.${key}`);
-              }
-            }
-          }
-        }
-      }
-      this.writeLog(`creating channel and states for execution`, "debug");
-      await this.setObjectNotExistsAsync(`box_${room}.execution`, {
-        type: "channel",
-        common: {
-          name: "execution"
-        },
-        native: {}
-      });
-      for (const key in import_object_definition.executionChannelObj) {
-        if (import_object_definition.executionChannelObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.execution.${key}`, import_object_definition.executionChannelObj[key]);
-        }
-      }
-      for (const key in import_object_definition.executionObj) {
-        if (import_object_definition.executionObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.execution.${key}`, import_object_definition.executionObj[key]);
-          if (import_object_definition.executionObj[key].common.write) {
-            if (!this.subscribedStates.includes(`box_${room}.execution.${key}`)) {
-              this.writeLog(`subscribe state box_${room}.execution.${key}`, "debug");
-              this.subscribeStates(`box_${room}.execution.${key}`);
-              this.subscribedStates.push(`box_${room}.execution.${key}`);
-            }
-          }
-        }
-      }
-      const array = ["game", "music", "video"];
-      for (const arrayKey in array) {
-        if (array.hasOwnProperty(arrayKey)) {
-          if (array[arrayKey] !== "music") {
-            for (const key in import_object_definition.video_gameObj) {
-              if (import_object_definition.video_gameObj.hasOwnProperty(key)) {
-                await this.setObjectNotExistsAsync(
-                  `box_${room}.execution.${array[arrayKey]}.${key}`,
-                  import_object_definition.video_gameObj[key]
-                );
-                if (import_object_definition.video_gameObj[key].common.write) {
-                  if (!this.subscribedStates.includes(
-                    `box_${room}.execution.${array[arrayKey]}.${key}`
-                  )) {
-                    this.writeLog(
-                      `subscribe state box_${room}.execution.${array[arrayKey]}.${key}`,
-                      "debug"
-                    );
-                    this.subscribeStates(`box_${room}.execution.${array[arrayKey]}.${key}`);
-                    this.subscribedStates.push(`box_${room}.execution.${array[arrayKey]}.${key}`);
-                  }
+          for (const key2 in import_object_definition.deviceStateObj) {
+            if (import_object_definition.deviceStateObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.device.${key2}`, import_object_definition.deviceStateObj[key2]);
+              if (import_object_definition.deviceStateObj[key2].common.write) {
+                if (!this.subscribedStates.includes(`box_${name}.device.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.device.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.device.${key2}`);
+                  this.subscribedStates.push(`box_${name}.device.${key2}`);
                 }
               }
             }
-          } else {
-            for (const key in import_object_definition.musicObj) {
-              if (import_object_definition.musicObj.hasOwnProperty(key)) {
+          }
+          for (const key2 in import_object_definition.networkObj) {
+            if (import_object_definition.networkObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.device.wifi.${key2}`, import_object_definition.networkObj[key2]);
+              if (import_object_definition.networkObj[key2].common.write) {
+                if (!this.subscribedStates.includes(`box_${name}.device.wifi.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.device.wifi.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.device.wifi.${key2}`);
+                  this.subscribedStates.push(`box_${name}.device.wifi.${key2}`);
+                }
+              }
+            }
+          }
+          for (const key2 in import_object_definition.updateObj) {
+            if (import_object_definition.updateObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.device.update.${key2}`, import_object_definition.updateObj[key2]);
+              if (import_object_definition.updateObj[key2].common.write) {
+                if (!this.subscribedStates.includes(`box_${name}.device.update.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.device.update.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.device.update.${key2}`);
+                  this.subscribedStates.push(`box_${name}.device.update.${key2}`);
+                }
+              }
+            }
+          }
+          for (const key2 in import_object_definition.capabilitiesObj) {
+            if (import_object_definition.capabilitiesObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(
+                `box_${name}.device.capabilities.${key2}`,
+                import_object_definition.capabilitiesObj[key2]
+              );
+              if (import_object_definition.capabilitiesObj[key2].common.write) {
+                if (!this.subscribedStates.includes(`box_${name}.device.capabilities.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.device.capabilities.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.device.capabilities.${key2}`);
+                  this.subscribedStates.push(`box_${name}.device.capabilities.${key2}`);
+                }
+              }
+            }
+          }
+          this.writeLog(`creating channel and states for hue`, "debug");
+          await this.setObjectNotExistsAsync(`box_${name}.hue`, {
+            type: "channel",
+            common: {
+              name: "hue"
+            },
+            native: {}
+          });
+          for (const key2 in import_object_definition.hueChannelObj) {
+            if (import_object_definition.hueChannelObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.hue.${key2}`, import_object_definition.hueChannelObj[key2]);
+            }
+          }
+          for (const key2 in import_object_definition.hueObj) {
+            if (import_object_definition.hueObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.hue.${key2}`, import_object_definition.hueObj[key2]);
+              if (import_object_definition.hueObj[key2].common.write) {
+                if (!this.subscribedStates.includes(`box_${name}.hue.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.hue.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.hue.${key2}`);
+                  this.subscribedStates.push(`box_${name}.hue.${key2}`);
+                }
+              }
+            }
+          }
+          for (const groupKey in data.hue.groups) {
+            for (const key2 in import_object_definition.groupsObj) {
+              if (import_object_definition.groupsObj.hasOwnProperty(key2)) {
                 await this.setObjectNotExistsAsync(
-                  `box_${room}.execution.${array[arrayKey]}.${key}`,
-                  import_object_definition.musicObj[key]
+                  `box_${name}.hue.groups.${groupKey}.${key2}`,
+                  import_object_definition.groupsObj[key2]
                 );
-                if (import_object_definition.musicObj[key].common.write) {
-                  if (!this.subscribedStates.includes(
-                    `box_${room}.execution.${array[arrayKey]}.${key}`
-                  )) {
+                if (import_object_definition.groupsObj[key2].common.write) {
+                  if (!this.subscribedStates.includes(`box_${name}.hue.groups.${groupKey}.${key2}`)) {
                     this.writeLog(
-                      `subscribe state box_${room}.execution.${array[arrayKey]}.${key}`,
+                      `subscribe state box_${name}.hue.groups.${groupKey}.${key2}`,
                       "debug"
                     );
-                    this.subscribeStates(`box_${room}.execution.${array[arrayKey]}.${key}`);
-                    this.subscribedStates.push(`box_${room}.execution.${array[arrayKey]}.${key}`);
+                    this.subscribeStates(`box_${name}.hue.groups.${groupKey}.${key2}`);
+                    this.subscribedStates.push(`box_${name}.hue.groups.${groupKey}.${key2}`);
                   }
                 }
               }
             }
           }
-        }
-      }
-      this.writeLog(`creating channel and states for hdmi`, "debug");
-      await this.setObjectNotExistsAsync(`box_${room}.hdmi`, {
-        type: "channel",
-        common: {
-          name: "hdmi"
-        },
-        native: {}
-      });
-      for (const key in import_object_definition.hdmiChannelObj) {
-        if (import_object_definition.hdmiChannelObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.hdmi.${key}`, import_object_definition.hdmiChannelObj[key]);
-        }
-      }
-      for (const key in import_object_definition.hdmiObj) {
-        if (import_object_definition.hdmiObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.hdmi.${key}`, import_object_definition.hdmiObj[key]);
-          if (import_object_definition.hdmiObj[key].common.write) {
-            if (!this.subscribedStates.includes(`box_${room}.hdmi.${key}`)) {
-              this.writeLog(`subscribe state box_${room}.hdmi.${key}`, "debug");
-              this.subscribeStates(`box_${room}.hdmi.${key}`);
-              this.subscribedStates.push(`box_${room}.hdmi.${key}`);
+          this.writeLog(`creating channel and states for execution`, "debug");
+          await this.setObjectNotExistsAsync(`box_${name}.execution`, {
+            type: "channel",
+            common: {
+              name: "execution"
+            },
+            native: {}
+          });
+          for (const key2 in import_object_definition.executionChannelObj) {
+            if (import_object_definition.executionChannelObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(
+                `box_${name}.execution.${key2}`,
+                import_object_definition.executionChannelObj[key2]
+              );
             }
           }
-        }
-      }
-      for (const key in import_object_definition.hdmiInputObj) {
-        if (import_object_definition.hdmiInputObj.hasOwnProperty(key)) {
-          for (let i = 1; i < 5; i++) {
-            await this.setObjectNotExistsAsync(`box_${room}.hdmi.input${i}.${key}`, import_object_definition.hdmiInputObj[key]);
-            if (import_object_definition.hdmiInputObj[key].common.write) {
-              if (!this.subscribedStates.includes(`box_${room}.hdmi.input${i}.${key}`)) {
-                this.writeLog(`subscribe state box_${room}.hdmi.input${i}.${key}`, "debug");
-                this.subscribeStates(`box_${room}.hdmi.input${i}.${key}`);
-                this.subscribedStates.push(`box_${room}.hdmi.input${i}.${key}`);
+          for (const key2 in import_object_definition.executionObj) {
+            if (import_object_definition.executionObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.execution.${key2}`, import_object_definition.executionObj[key2]);
+              if (import_object_definition.executionObj[key2].common.write) {
+                if (!this.subscribedStates.includes(`box_${name}.execution.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.execution.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.execution.${key2}`);
+                  this.subscribedStates.push(`box_${name}.execution.${key2}`);
+                }
               }
             }
           }
-        }
-        await this.setObjectNotExistsAsync(`box_${room}.hdmi.output.${key}`, import_object_definition.hdmiInputObj[key]);
-        if (import_object_definition.hdmiInputObj[key].common.write) {
-          if (!this.subscribedStates.includes(`box_${room}.hdmi.output.${key}`)) {
-            this.writeLog(`subscribe state box_${room}.hdmi.output.${key}`, "debug");
-            this.subscribeStates(`box_${room}.hdmi.output.${key}`);
-            this.subscribedStates.push(`box_${room}.hdmi.output.${key}`);
-          }
-        }
-      }
-      this.writeLog(`creating channel and states for behavior`, "debug");
-      await this.setObjectNotExistsAsync(`box_${room}.behavior`, {
-        type: "channel",
-        common: {
-          name: "behavior"
-        },
-        native: {}
-      });
-      for (const key in import_object_definition.behaviorChannelObj) {
-        if (import_object_definition.behaviorChannelObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.behavior.${key}`, import_object_definition.behaviorChannelObj[key]);
-        }
-      }
-      for (const key in import_object_definition.behaviorObj) {
-        if (import_object_definition.behaviorObj.hasOwnProperty(key)) {
-          await this.setObjectNotExistsAsync(`box_${room}.behavior.${key}`, import_object_definition.behaviorObj[key]);
-          if (import_object_definition.behaviorObj[key].common.write) {
-            if (!this.subscribedStates.includes(`box_${room}.behavior.${key}`)) {
-              this.writeLog(`subscribe state box_${room}.behavior.${key}`, "debug");
-              this.subscribeStates(`box_${room}.behavior.${key}`);
-              this.subscribedStates.push(`box_${room}.behavior.${key}`);
-            }
-          }
-        }
-      }
-      for (const key in import_object_definition.behaviorInputObj) {
-        if (import_object_definition.behaviorInputObj.hasOwnProperty(key)) {
-          for (let i = 1; i < 5; i++) {
-            await this.setObjectNotExistsAsync(
-              `box_${room}.behavior.input${i}.${key}`,
-              import_object_definition.behaviorInputObj[key]
-            );
-            if (import_object_definition.behaviorInputObj[key].common.write) {
-              if (!this.subscribedStates.includes(`box_${room}.behavior.input${i}.${key}`)) {
-                this.writeLog(`subscribe state box_${room}.behavior.input${i}.${key}`, "debug");
-                this.subscribeStates(`box_${room}.behavior.input${i}.${key}`);
-                this.subscribedStates.push(`box_${room}.behavior.input${i}.${key}`);
+          const array = ["game", "music", "video"];
+          for (const arrayKey in array) {
+            if (array.hasOwnProperty(arrayKey)) {
+              if (array[arrayKey] !== "music") {
+                for (const key2 in import_object_definition.video_gameObj) {
+                  if (import_object_definition.video_gameObj.hasOwnProperty(key2)) {
+                    await this.setObjectNotExistsAsync(
+                      `box_${name}.execution.${array[arrayKey]}.${key2}`,
+                      import_object_definition.video_gameObj[key2]
+                    );
+                    if (import_object_definition.video_gameObj[key2].common.write) {
+                      if (!this.subscribedStates.includes(
+                        `box_${name}.execution.${array[arrayKey]}.${key2}`
+                      )) {
+                        this.writeLog(
+                          `subscribe state box_${name}.execution.${array[arrayKey]}.${key2}`,
+                          "debug"
+                        );
+                        this.subscribeStates(`box_${name}.execution.${array[arrayKey]}.${key2}`);
+                        this.subscribedStates.push(
+                          `box_${name}.execution.${array[arrayKey]}.${key2}`
+                        );
+                      }
+                    }
+                  }
+                }
+              } else {
+                for (const key2 in import_object_definition.musicObj) {
+                  if (import_object_definition.musicObj.hasOwnProperty(key2)) {
+                    await this.setObjectNotExistsAsync(
+                      `box_${name}.execution.${array[arrayKey]}.${key2}`,
+                      import_object_definition.musicObj[key2]
+                    );
+                    if (import_object_definition.musicObj[key2].common.write) {
+                      if (!this.subscribedStates.includes(
+                        `box_${name}.execution.${array[arrayKey]}.${key2}`
+                      )) {
+                        this.writeLog(
+                          `subscribe state box_${name}.execution.${array[arrayKey]}.${key2}`,
+                          "debug"
+                        );
+                        this.subscribeStates(`box_${name}.execution.${array[arrayKey]}.${key2}`);
+                        this.subscribedStates.push(
+                          `box_${name}.execution.${array[arrayKey]}.${key2}`
+                        );
+                      }
+                    }
+                  }
+                }
               }
             }
           }
+          this.writeLog(`creating channel and states for hdmi`, "debug");
+          await this.setObjectNotExistsAsync(`box_${name}.hdmi`, {
+            type: "channel",
+            common: {
+              name: "hdmi"
+            },
+            native: {}
+          });
+          for (const key2 in import_object_definition.hdmiChannelObj) {
+            if (import_object_definition.hdmiChannelObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.hdmi.${key2}`, import_object_definition.hdmiChannelObj[key2]);
+            }
+          }
+          for (const key2 in import_object_definition.hdmiObj) {
+            if (import_object_definition.hdmiObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.hdmi.${key2}`, import_object_definition.hdmiObj[key2]);
+              if (import_object_definition.hdmiObj[key2].common.write) {
+                if (!this.subscribedStates.includes(`box_${name}.hdmi.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.hdmi.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.hdmi.${key2}`);
+                  this.subscribedStates.push(`box_${name}.hdmi.${key2}`);
+                }
+              }
+            }
+          }
+          for (const key2 in import_object_definition.hdmiInputObj) {
+            if (import_object_definition.hdmiInputObj.hasOwnProperty(key2)) {
+              for (let i = 1; i < 5; i++) {
+                await this.setObjectNotExistsAsync(
+                  `box_${name}.hdmi.input${i}.${key2}`,
+                  import_object_definition.hdmiInputObj[key2]
+                );
+                if (import_object_definition.hdmiInputObj[key2].common.write) {
+                  if (!this.subscribedStates.includes(`box_${name}.hdmi.input${i}.${key2}`)) {
+                    this.writeLog(`subscribe state box_${name}.hdmi.input${i}.${key2}`, "debug");
+                    this.subscribeStates(`box_${name}.hdmi.input${i}.${key2}`);
+                    this.subscribedStates.push(`box_${name}.hdmi.input${i}.${key2}`);
+                  }
+                }
+              }
+            }
+            await this.setObjectNotExistsAsync(`box_${name}.hdmi.output.${key2}`, import_object_definition.hdmiInputObj[key2]);
+            if (import_object_definition.hdmiInputObj[key2].common.write) {
+              if (!this.subscribedStates.includes(`box_${name}.hdmi.output.${key2}`)) {
+                this.writeLog(`subscribe state box_${name}.hdmi.output.${key2}`, "debug");
+                this.subscribeStates(`box_${name}.hdmi.output.${key2}`);
+                this.subscribedStates.push(`box_${name}.hdmi.output.${key2}`);
+              }
+            }
+          }
+          this.writeLog(`creating channel and states for behavior`, "debug");
+          await this.setObjectNotExistsAsync(`box_${name}.behavior`, {
+            type: "channel",
+            common: {
+              name: "behavior"
+            },
+            native: {}
+          });
+          for (const key2 in import_object_definition.behaviorChannelObj) {
+            if (import_object_definition.behaviorChannelObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.behavior.${key2}`, import_object_definition.behaviorChannelObj[key2]);
+            }
+          }
+          for (const key2 in import_object_definition.behaviorObj) {
+            if (import_object_definition.behaviorObj.hasOwnProperty(key2)) {
+              await this.setObjectNotExistsAsync(`box_${name}.behavior.${key2}`, import_object_definition.behaviorObj[key2]);
+              if (import_object_definition.behaviorObj[key2].common.write) {
+                if (!this.subscribedStates.includes(`box_${name}.behavior.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.behavior.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.behavior.${key2}`);
+                  this.subscribedStates.push(`box_${name}.behavior.${key2}`);
+                }
+              }
+            }
+          }
+          for (const key2 in import_object_definition.behaviorInputObj) {
+            if (import_object_definition.behaviorInputObj.hasOwnProperty(key2)) {
+              for (let i = 1; i < 5; i++) {
+                await this.setObjectNotExistsAsync(
+                  `box_${name}.behavior.input${i}.${key2}`,
+                  import_object_definition.behaviorInputObj[key2]
+                );
+                if (import_object_definition.behaviorInputObj[key2].common.write) {
+                  if (!this.subscribedStates.includes(`box_${name}.behavior.input${i}.${key2}`)) {
+                    this.writeLog(`subscribe state box_${name}.behavior.input${i}.${key2}`, "debug");
+                    this.subscribeStates(`box_${name}.behavior.input${i}.${key2}`);
+                    this.subscribedStates.push(`box_${name}.behavior.input${i}.${key2}`);
+                  }
+                }
+              }
+            }
+          }
+          this.writeLog(`all device / channel and states were created for ${name}`, "debug");
         }
       }
-      this.writeLog(`all device / channel and states were created for ${room}`, "debug");
     } catch (error) {
       this.writeLog(`[createObjects] ${error.message} Stack: ${error.stack}`, "error");
     }
@@ -494,7 +529,7 @@ class HueSyncBox extends utils.Adapter {
   onUnload(callback) {
     try {
       if (this.requestTimer)
-        clearTimeout(this.requestTimer);
+        this.clearTimeout(this.requestTimer);
       this.setState("info.connection", false, true);
       callback();
     } catch (e) {
@@ -532,6 +567,28 @@ class HueSyncBox extends utils.Adapter {
       }
     } else {
       return;
+    }
+  }
+  async onMessage(obj) {
+    if (typeof obj === "object" && obj.message) {
+      if (obj.command === "registrations") {
+        try {
+          this.writeLog("start registrations", "info");
+          const device = obj.message;
+          device.ip = "localhost:3000";
+          const registrationsUrl = `${protocol}://${device.ip}/api/v1/registrations`;
+          const registrations = await import_axios.default.post(registrationsUrl, {
+            headers: {
+              contentType: "application/json"
+            },
+            data: { appName: "ioBroker", instanceName: `hue_sync_box_${device.name}` }
+          });
+          if (obj.callback)
+            this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
+        } catch (error) {
+          this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
+        }
+      }
     }
   }
 }
