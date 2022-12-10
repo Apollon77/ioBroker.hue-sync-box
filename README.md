@@ -1,4 +1,4 @@
-![Logo](admin/hue-sync-box.png)
+![Logo](admin/hueSyncBox.png)
 # ioBroker.hue-sync-box
 
 [![NPM version](https://img.shields.io/npm/v/iobroker.hue-sync-box.svg)](https://www.npmjs.com/package/iobroker.hue-sync-box)
