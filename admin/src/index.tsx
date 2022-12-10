@@ -1,10 +1,8 @@
 import Utils from '@iobroker/adapter-react-v5/Components/Utils';
 import theme from '@iobroker/adapter-react-v5/Theme';
-// UI elements are imported from Material-UI
 import { ThemeProvider } from '@mui/material/styles';
-// import from iobroker-react docu page => https://github.com/AlCalzone/iobroker-react
 import { SettingsApp } from 'iobroker-react/app';
-import { useSettings } from 'iobroker-react/hooks';
+import { useIoBrokerObject, useSettings } from 'iobroker-react/hooks';
 import type { Translations } from 'iobroker-react/i18n';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -29,10 +27,16 @@ const SettingsPageContent: React.FC = React.memo(() => {
 			[option]: value,
 		}));
 	};
-
+	const [systemConfigObj] = useIoBrokerObject('system.config');
+	const secret = systemConfigObj?.native?.secret || 'Zgfr56gFe87jJOM';
+	console.log('secret', secret);
 	return (
 		<React.Fragment>
-			<SettingPage settings={settings} onChange={(option, value) => handleChange(option, value)} />
+			<SettingPage
+				settings={settings}
+				secret={secret}
+				onChange={(option, value) => handleChange(option, value)}
+			/>
 		</React.Fragment>
 	);
 });
@@ -56,6 +60,7 @@ const translations: Translations = {
 	it: require('./i18n/it.json'),
 	es: require('./i18n/es.json'),
 	pl: require('./i18n/pl.json'),
+	uk: require('./i18n/uk.json'),
 	'zh-cn': require('./i18n/zh-cn.json'),
 };
 
