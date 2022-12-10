@@ -580,6 +580,7 @@ class HueSyncBox extends utils.Adapter {
             headers: {
               contentType: "application/json"
             },
+            httpsAgent: new https.Agent({ rejectUnauthorized: false }),
             data: { appName: "ioBroker", instanceName: `hue_sync_box_${device.name}` }
           });
           if (obj.callback)
