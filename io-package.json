@@ -2,21 +2,7 @@
 	"common": {
 		"name": "hue-sync-box",
 		"version": "0.0.1",
-		"news": {
-			"0.0.1": {
-				"en": "initial release",
-				"de": "Erstveröffentlichung",
-				"ru": "Начальная версия",
-				"pt": "lançamento inicial",
-				"nl": "Eerste uitgave",
-				"fr": "Première version",
-				"it": "Versione iniziale",
-				"es": "Versión inicial",
-				"pl": "Pierwsze wydanie",
-				"uk": "Початкова версія",
-				"zh-cn": "首次出版"
-			}
-		},
+		"news": {},
 		"title": "Hue Sync Box",
 		"titleLang": {
 			"en": "Hue Sync Box",
@@ -32,20 +18,20 @@
 			"zh-cn": "Hue Sync Box"
 		},
 		"desc": {
-			"en": "Template React with AlCalzone Hooks",
-			"de": "Template React mit AlCalzone Hooks",
-			"ru": "Шаблон React с хуками AlCalzone",
-			"pt": "Reação do modelo com ganchos AlCalzone",
-			"nl": "Sjabloon Reageren met AlCalzone Hooks",
-			"fr": "Modèle Réagissez avec les crochets AlCalzone",
-			"it": "Modello Reagire con Ganci AlCalzone",
-			"es": "Plantilla Reaccionar con ganchos de AlCalzone",
-			"pl": "Szablon React z hakami AlCalzone",
-			"uk": "Шаблон React з хуками AlCalzone",
-			"zh-cn": "模板与 AlCalzone Hooks 反应"
+			"en": "An adapter to read and control the Philips Hue Sync Box",
+			"de": "Ein Adapter zum Lesen und Steuern der Philips Hue Sync Box",
+			"ru": "Адаптер для чтения и управления Philips Hue Sync Box",
+			"pt": "Um adaptador para ler e controlar a Philips Hue Sync Box",
+			"nl": "Een adapter om de Philips Hue Sync Box te lezen en te bedienen",
+			"fr": "Un adaptateur pour lire et contrôler la Philips Hue Sync Box",
+			"it": "Un adattatore per leggere e controllare la Philips Hue Sync Box",
+			"es": "Un adaptador para leer y controlar la Philips Hue Sync Box",
+			"pl": "Adapter do odczytu i sterowania Philips Hue Sync Box",
+			"uk": "Адаптер для читання та керування Philips Hue Sync Box",
+			"zh-cn": "用于读取和控制Philips Hue Sync Box的适配器"
 		},
 		"authors": ["Issi <issi.dev.iobroker@gmail.com>"],
-		"keywords": ["ioBroker", "Smart Home", "home automation"],
+		"keywords": ["philips", "hue", "led", "light", "sync", "hue sync box"],
 		"license": "MIT",
 		"platform": "Javascript/Node.js",
 		"main": "build/main.js",
@@ -55,7 +41,7 @@
 		"readme": "https://github.com/xXBJXx/ioBroker.hue-sync-box/blob/main/README.md",
 		"loglevel": "info",
 		"mode": "daemon",
-		"type": "hardware",
+		"type": "lighting",
 		"compact": true,
 		"connectionType": "local",
 		"dataSource": "poll",
