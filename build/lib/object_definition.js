@@ -100,7 +100,7 @@ const deviceStateObj = {
       role: "text",
       def: "",
       read: true,
-      write: true
+      write: false
     },
     native: {}
   },
@@ -401,7 +401,7 @@ const hueObj = {
       role: "text",
       def: "",
       read: true,
-      write: true
+      write: false
     },
     native: {}
   },
@@ -490,7 +490,7 @@ const groupsObj = {
       role: "switch",
       def: false,
       read: true,
-      write: true
+      write: false
     },
     native: {}
   },
@@ -629,7 +629,8 @@ const executionObj = {
       role: "text",
       def: "",
       read: true,
-      write: true
+      write: true,
+      states: {}
     },
     native: {}
   },
@@ -681,7 +682,7 @@ const executionObj = {
       desc: "cycle Sync Mode next, previous",
       type: "string",
       role: "text",
-      def: "",
+      def: "next",
       read: true,
       write: true,
       states: {
@@ -698,7 +699,7 @@ const executionObj = {
       desc: "cycle Hdmi Source next, previous",
       type: "string",
       role: "text",
-      def: "",
+      def: "next",
       read: true,
       write: true,
       states: {
@@ -730,7 +731,7 @@ const executionObj = {
       desc: "next, previous (cycle intensity of current mode if syncing)",
       type: "string",
       role: "text",
-      def: "",
+      def: "next",
       read: true,
       write: true,
       states: {
@@ -747,7 +748,7 @@ const executionObj = {
       desc: "subtle, moderate, high, intense (if syncing)",
       type: "string",
       role: "text",
-      def: "",
+      def: "high",
       read: true,
       write: true,
       states: {
@@ -781,9 +782,15 @@ const video_gameObj = {
       desc: "intensity of the video",
       type: "string",
       role: "text",
-      def: "",
+      def: "high",
       read: true,
-      write: true
+      write: true,
+      states: {
+        subtle: "subtle",
+        moderate: "moderate",
+        high: "high",
+        intense: "intense"
+      }
     },
     native: {}
   },
@@ -809,9 +816,15 @@ const musicObj = {
       desc: "intensity of the video",
       type: "string",
       role: "text",
-      def: "",
+      def: "high",
       read: true,
-      write: true
+      write: true,
+      states: {
+        subtle: "subtle",
+        moderate: "moderate",
+        high: "high",
+        intense: "intense"
+      }
     },
     native: {}
   },

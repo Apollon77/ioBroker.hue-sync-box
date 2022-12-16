@@ -22,7 +22,6 @@ var import_object_definition = require("./lib/object_definition");
 var https = __toESM(require("https"));
 var import_axios = __toESM(require("axios"));
 var import_replaceFunktion = require("./lib/replaceFunktion");
-const protocol = "https";
 class HueSyncBox extends utils.Adapter {
   constructor(options = {}) {
     super({
@@ -35,6 +34,8 @@ class HueSyncBox extends utils.Adapter {
     this.on("unload", this.onUnload.bind(this));
     this.requestTimer = null;
     this.subscribedStates = [];
+    this.hueTarget = [];
+    this.hdmiSource = [];
   }
   async onReady() {
     this.setState("info.connection", false, true);
@@ -48,7 +49,7 @@ class HueSyncBox extends utils.Adapter {
       for (const devicesKey in this.config.devices) {
         if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
           const device = this.config.devices[devicesKey];
-          const result = await this.apiCall(`${protocol}://${device.ip}/api/v1`, device.token, "GET");
+          const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, "GET");
           if (result.status === 200) {
             this.setState("info.connection", true, true);
             await this.writeState(result, parseInt(devicesKey));
@@ -172,7 +173,6 @@ class HueSyncBox extends utils.Adapter {
       const name = id.split(".")[0].replace("box_", "");
       const channel = id.split(".")[1];
       const channel2 = id.split(".")[2];
-      const channel3 = id.split(".")[3];
       const commandWord = id.split(".").pop();
       let boxConfig = null;
       for (const devicesKey in this.config.devices) {
@@ -186,18 +186,10 @@ class HueSyncBox extends utils.Adapter {
         return;
       }
       let url;
-      if (channel3 !== void 0) {
-        if (commandWord === channel3) {
-          url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
-        } else {
-          url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}/${channel3}`;
-        }
+      if (commandWord === channel2) {
+        url = `https://${boxConfig.ip}/api/v1/${channel}`;
       } else {
-        if (commandWord === channel2) {
-          url = `${protocol}://${boxConfig.ip}/api/v1/${channel}`;
-        } else {
-          url = `${protocol}://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
-        }
+        url = `https://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
       }
       this.writeLog(`assemble the url ${url}`, "debug");
       this.writeLog(`send the request to ${url}`, "debug");
@@ -207,6 +199,7 @@ class HueSyncBox extends utils.Adapter {
       if (response.status === 200) {
         this.writeLog(`${id} was changed to ${state.val}`, "debug");
         await this.setStateAsync(id, state.val, true);
+        await this.request();
       }
     } catch (error) {
       this.writeLog(`[sendCommand] ${error.message} Stack: ${error.stack}`, "error");
@@ -217,7 +210,7 @@ class HueSyncBox extends utils.Adapter {
       for (const key in this.config.devices) {
         if (Object.prototype.hasOwnProperty.call(this.config.devices, key)) {
           const result = await this.apiCall(
-            `${protocol}://${this.config.devices[key].ip}/api/v1`,
+            `https://${this.config.devices[key].ip}/api/v1`,
             this.config.devices[key].token,
             "GET"
           );
@@ -365,12 +358,81 @@ class HueSyncBox extends utils.Adapter {
           }
           for (const key2 in import_object_definition.executionObj) {
             if (import_object_definition.executionObj.hasOwnProperty(key2)) {
-              await this.setObjectNotExistsAsync(`box_${name}.execution.${key2}`, import_object_definition.executionObj[key2]);
-              if (import_object_definition.executionObj[key2].common.write) {
+              if (key2 === "hueTarget") {
+                const hueTargetObj = {};
+                for (const dataKey in data.hue.groups) {
+                  if (data.hue.groups.hasOwnProperty(dataKey)) {
+                    if (!this.hueTarget.some((element) => element.id === dataKey)) {
+                      this.hueTarget.push({ id: dataKey, name: data.hue.groups[dataKey].name });
+                    }
+                  }
+                }
+                for (const hueTargetKey in this.hueTarget) {
+                  if (this.hueTarget.hasOwnProperty(hueTargetKey)) {
+                    hueTargetObj[this.hueTarget[hueTargetKey].id] = this.hueTarget[hueTargetKey].name;
+                  }
+                }
+                const oldObj = await this.getObjectAsync(`box_${name}.execution.${key2}`);
+                if (oldObj) {
+                  oldObj.common.states = hueTargetObj;
+                  await this.setObjectAsync(`box_${name}.execution.${key2}`, oldObj);
+                } else {
+                  await this.setObjectNotExistsAsync(`box_${name}.execution.${key2}`, {
+                    ...import_object_definition.executionObj[key2],
+                    common: {
+                      ...import_object_definition.executionObj[key2].common,
+                      states: hueTargetObj
+                    }
+                  });
+                }
                 if (!this.subscribedStates.includes(`box_${name}.execution.${key2}`)) {
                   this.writeLog(`subscribe state box_${name}.execution.${key2}`, "debug");
                   this.subscribeStates(`box_${name}.execution.${key2}`);
                   this.subscribedStates.push(`box_${name}.execution.${key2}`);
+                }
+              } else if (key2 === "hdmiSource") {
+                const hdmiSourceObj = {};
+                for (const dataKey in data.hdmi) {
+                  if (data.hdmi.hasOwnProperty(dataKey)) {
+                    if (dataKey === "input1" || dataKey === "input2" || dataKey === "input3" || dataKey === "input4") {
+                      if (!this.hdmiSource.some((element) => element.id === dataKey)) {
+                        this.hdmiSource.push({ id: dataKey, name: data.hdmi[dataKey].name });
+                      } else {
+                      }
+                    }
+                  }
+                }
+                for (const hdmiSourceKey in this.hdmiSource) {
+                  if (this.hdmiSource.hasOwnProperty(hdmiSourceKey)) {
+                    hdmiSourceObj[this.hdmiSource[hdmiSourceKey].id] = this.hdmiSource[hdmiSourceKey].name;
+                  }
+                }
+                const oldObj = await this.getObjectAsync(`box_${name}.execution.${key2}`);
+                if (oldObj) {
+                  oldObj.common.states = hdmiSourceObj;
+                  await this.setObjectAsync(`box_${name}.execution.${key2}`, oldObj);
+                } else {
+                  await this.setObjectNotExistsAsync(`box_${name}.execution.${key2}`, {
+                    ...import_object_definition.executionObj[key2],
+                    common: {
+                      ...import_object_definition.executionObj[key2].common,
+                      states: hdmiSourceObj
+                    }
+                  });
+                }
+                if (!this.subscribedStates.includes(`box_${name}.execution.${key2}`)) {
+                  this.writeLog(`subscribe state box_${name}.execution.${key2}`, "debug");
+                  this.subscribeStates(`box_${name}.execution.${key2}`);
+                  this.subscribedStates.push(`box_${name}.execution.${key2}`);
+                }
+              } else {
+                await this.setObjectNotExistsAsync(`box_${name}.execution.${key2}`, import_object_definition.executionObj[key2]);
+                if (import_object_definition.executionObj[key2].common.write) {
+                  if (!this.subscribedStates.includes(`box_${name}.execution.${key2}`)) {
+                    this.writeLog(`subscribe state box_${name}.execution.${key2}`, "debug");
+                    this.subscribeStates(`box_${name}.execution.${key2}`);
+                    this.subscribedStates.push(`box_${name}.execution.${key2}`);
+                  }
                 }
               }
             }
@@ -573,20 +635,62 @@ class HueSyncBox extends utils.Adapter {
     if (typeof obj === "object" && obj.message) {
       if (obj.command === "registrations") {
         try {
-          this.writeLog("start registrations", "info");
           const device = obj.message;
-          const registrationsUrl = `${protocol}://${device.ip}/api/v1/registrations`;
-          const registrations = await import_axios.default.post(registrationsUrl, {
-            headers: {
-              contentType: "application/json"
-            },
-            httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-            data: { appName: "ioBroker", instanceName: `hue_sync_box_${device.name}` }
+          const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
+          const agent = new https.Agent({
+            rejectUnauthorized: false
           });
+          const registrations = await import_axios.default.post(
+            registrationsUrl,
+            {
+              appName: "ioBroker",
+              instanceName: `hue_sync_box_${device.name}`
+            },
+            {
+              httpsAgent: agent
+            }
+          );
           if (obj.callback)
             this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
         } catch (error) {
-          this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
+          if (error.code === "ETIMEDOUT") {
+            this.writeLog(`[onMessage] ${error.message} Stack: ${error.stack}`, "error");
+            const response = {
+              code: error.code,
+              message: error.message
+            };
+            if (obj.callback)
+              this.sendTo(obj.from, obj.command, response, obj.callback);
+            return;
+          }
+          if (error.response.status === 400) {
+            if (error.response.data.code === 16) {
+              const response = error.response.data;
+              if (obj.callback)
+                this.sendTo(obj.from, obj.command, response, obj.callback);
+              console.log("response: ", response);
+            } else {
+              this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
+              const response = {
+                code: error.response.status,
+                codeString: error.code,
+                message: error.message,
+                responseMessage: error.response.statusText
+              };
+              if (obj.callback)
+                this.sendTo(obj.from, obj.command, response, obj.callback);
+            }
+          } else {
+            this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
+            const response = {
+              code: error.response.status,
+              codeString: error.code,
+              message: error.message,
+              responseMessage: error.response.statusText
+            };
+            if (obj.callback)
+              this.sendTo(obj.from, obj.command, response, obj.callback);
+          }
         }
       }
     }
