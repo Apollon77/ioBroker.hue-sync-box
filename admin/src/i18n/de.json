@@ -22,6 +22,7 @@
 	"open_registration": "Box Registrieren",
 	"registration_Notice": "Bitte geben Sie den Namen und die IP Adresse ein, um die Registrierung zu aktivieren.",
 	"registration_button": "Registrierung",
+	"registration_dataError": "Fehler bei der Registrierung > %s < Überprüfen Sie Ihre IP und versuchen Sie es erneut",
 	"registration_description1": "Sobald die Registrierungstaste gedrückt wird, beginnt die Registrierung.",
 	"registration_description2": "Sie haben nun 5 Sekunden Zeit, die Gerätetaste zu drücken und zu halten (ca. 3 Sekunden), bis die LED grün blinkt. ",
 	"registration_description3": "Wenn die LED grün blinkt, können Sie die Gerätetaste loslassen.",

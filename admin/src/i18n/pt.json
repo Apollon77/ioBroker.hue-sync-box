@@ -22,6 +22,7 @@
 	"open_registration": "Caixa de registo",
 	"registration_Notice": "Por favor, preencha o nome e o endereço IP para activar o registo.",
 	"registration_button": "Inscrição",
+	"registration_dataError": "Registo de erros > %s < Verifique o seu IP e tente novamente",
 	"registration_description1": "Assim que o botão de registo for premido, o registo será iniciado.",
 	"registration_description2": "agora tem 5 segundos para premir e manter premida a tecla de dispositivo (aprox. 3 segundos) até o LED piscar a verde.",
 	"registration_description3": "Quando o LED pisca a verde, pode libertar a chave do dispositivo.",

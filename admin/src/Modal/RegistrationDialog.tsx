@@ -16,18 +16,19 @@ import { RegistrationsTimer } from '../component/RegistrationsTimer';
 import { orange } from '@mui/material/colors';
 
 interface RegistrationDialogProps {
-	settings: { name: string; ip: string; token: string };
+	config: { name: string; ip: string; token: string };
 	token: (token: string) => void;
 	disabled: boolean;
 }
 
-export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ settings, token, disabled }): JSX.Element => {
+export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, token, disabled }): JSX.Element => {
 	const { translate: t } = useI18n();
 	const [registration, setRegistration] = React.useState(false);
 	const [error, setError] = React.useState(false);
 	const [success, setSuccess] = React.useState(false);
 	const [cancel, setCancel] = React.useState(false);
 	const [open, setOpen] = React.useState(false);
+	const [dataError, setDataError] = React.useState(false);
 
 	const handleOpen = () => {
 		setOpen(true);
@@ -48,7 +49,29 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ settings
 				setError(false);
 				setCancel(false);
 			}
+			if (data.code === 404) {
+				setRegistration(false);
+				setSuccess(false);
+				setError(false);
+				setCancel(false);
+				setDataError(true);
+				console.log(data.message);
+				console.log(data.codeString);
+			}
+			if (data.code === 'ETIMEDOUT') {
+				setRegistration(false);
+				setSuccess(false);
+				setError(false);
+				setCancel(false);
+				setDataError(true);
+				console.log(data.message);
+			}
 		} else {
+			console.log('data ', data);
+			setDataError(true);
+			setSuccess(false);
+			setError(false);
+			setCancel(false);
 		}
 	};
 
@@ -74,11 +97,11 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ settings
 					},
 				}}
 			>
-				<DialogTitle>{t('registration_titel', settings.name)}</DialogTitle>
+				<DialogTitle>{t('registration_titel', config.name)}</DialogTitle>
 				<DialogContent>
 					<Stack sx={{ width: '100%' }} spacing={2}>
 						<Registration
-							ip={settings.ip}
+							config={config}
 							results={(data) => handleRegistration(data)}
 							buttonName={t('registration_button')}
 						/>
@@ -98,7 +121,7 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ settings
 							<React.Fragment>
 								<RegistrationsTimer cancel={cancel} progress={(percent) => handleProgress(percent)} />
 								<Registration
-									ip={settings.ip}
+									config={config}
 									results={(data) => handleRegistration(data)}
 									buttonName={t('next')}
 								/>
@@ -108,9 +131,17 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ settings
 							<Alert variant="filled" severity="error">
 								<AlertTitle>{t('error')}</AlertTitle>
 								<Typography variant="body2" color="text.secondary" component="p">
-									{t('registration_error_1', settings.name)}
+									{t('registration_error_1', config.name)}
 									<br />
-									{t('registration_error_2', settings.name)}
+									{t('registration_error_2', config.name)}
+								</Typography>
+							</Alert>
+						)}
+						{dataError && (
+							<Alert variant="filled" severity="error">
+								<AlertTitle>{t('error')}</AlertTitle>
+								<Typography variant="body2" color="text.secondary" component="p">
+									{t('registration_dataError', config.name)}
 								</Typography>
 							</Alert>
 						)}
@@ -118,9 +149,9 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ settings
 							<Alert variant="filled" severity="success">
 								<AlertTitle>{t('success')}</AlertTitle>
 								<Typography variant="body2" color="text.secondary" component="p">
-									{t('registration_success', settings.name)}
+									{t('registration_success', config.name)}
 									<br />
-									{t('registration_success_token', settings.token)}
+									{t('registration_success_token', config.token)}
 								</Typography>
 							</Alert>
 						)}

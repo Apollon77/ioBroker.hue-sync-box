@@ -22,6 +22,7 @@
 	"open_registration": "Register Box",
 	"registration_Notice": "Vul de naam en het IP adres in om de registratie te activeren.",
 	"registration_button": "Registratie",
+	"registration_dataError": "Fout bij het registreren > %s < Controleer uw IP en probeer het opnieuw",
 	"registration_description1": "Zodra op de registratieknop wordt gedrukt, begint de registratie.",
 	"registration_description2": "U hebt nu 5 seconden om de apparaattoets ingedrukt te houden (ongeveer 3 seconden) totdat de LED groen knippert.",
 	"registration_description3": "Wanneer de LED groen knippert, kunt u de apparaattoets loslaten.",

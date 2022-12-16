@@ -14,8 +14,8 @@ import {
 } from '@mui/material';
 import { AlertComponent } from '../component/AlertComponent';
 import { IpAddressInput, PasswordInput } from 'iobroker-react';
-import { RegistrationDialog } from './RegistrationDialog';
 import { encrypt } from 'iobroker-react/lib/shared/tools';
+import { RegistrationDialog } from './RegistrationDialog';
 import { orange } from '@mui/material/colors';
 
 interface AddHueSyncBoxProps {
@@ -281,7 +281,7 @@ export const AddHueSyncBox: React.FC<AddHueSyncBoxProps> = ({ alive, settings, n
 								</Typography>
 							) : null}
 							<RegistrationDialog
-								settings={{ name: name, ip: ip, token: token }}
+								config={{ name: name, ip: ip, token: token }}
 								token={(value) => handleTokenChange(value)}
 								disabled={registrationDisabled}
 							/>

@@ -22,6 +22,7 @@
 	"open_registration": "Scatola del registro",
 	"registration_Notice": "Inserire il nome e l'indirizzo IP per attivare la registrazione.",
 	"registration_button": "Registrazione",
+	"registration_dataError": "Errore di registrazione > %s < Controllare il proprio IP e riprovare",
 	"registration_description1": "Non appena si preme il pulsante di registrazione, si avvia la registrazione.",
 	"registration_description2": "Ora avete 5 secondi per tenere premuto il tasto dispositivo (circa 3 secondi) finché il LED non lampeggia in verde.",
 	"registration_description3": "Quando il LED lampeggia in verde, è possibile rilasciare il tasto dispositivo.",

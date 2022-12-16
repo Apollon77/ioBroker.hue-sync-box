@@ -28,12 +28,19 @@ export const EditComponent: React.FC<RowProps> = ({ secret, newRow, oldRow, vali
 	const [ip, setIp] = useState<string>(oldRow.ip);
 	const [token, setToken] = useState<string>(decrypt(secret, oldRow.token));
 	const [newEditRow, setNewRow] = useState<ioBroker.Devices>(oldRow);
-	const [validIp, setValidIp] = React.useState(false);
-	const [validToken, setValidToken] = React.useState(false);
+	const [validIp, setValidIp] = React.useState(true);
+	const [validToken, setValidToken] = React.useState(true);
 
 	React.useEffect(() => {
 		valid(validIp && validToken);
 	}, [validIp, validToken]);
+
+	// React.useEffect(() => {
+	// 	if (ip.length !== 0 && token.length !== 0) {
+	// 		setValidIp(true);
+	// 		setValidToken(true);
+	// 	}
+	// }, []);
 
 	useEffect(() => {
 		// check if a change was made to the newRow

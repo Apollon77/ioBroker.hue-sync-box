@@ -22,6 +22,7 @@
 	"open_registration": "Caja de registro",
 	"registration_Notice": "Rellene el nombre y la dirección IP para activar el registro.",
 	"registration_button": "Inscripción",
+	"registration_dataError": "Error al registrar > %s < Compruebe su IP e inténtelo de nuevo.",
 	"registration_description1": "En cuanto se pulse el botón de registro, se iniciará el registro.",
 	"registration_description2": "ahora tiene 5 segundos para mantener pulsada la tecla del dispositivo (aprox. 3 segundos) hasta que el LED parpadee en verde.",
 	"registration_description3": "Cuando el LED parpadee en verde, puede soltar la tecla del dispositivo.",

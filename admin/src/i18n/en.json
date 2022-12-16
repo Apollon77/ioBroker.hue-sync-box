@@ -22,6 +22,7 @@
 	"open_registration": "Register Box",
 	"registration_Notice": "Please fill in the name and IP address to activate the registration.",
 	"registration_button": "Registration",
+	"registration_dataError": "Error registering > %s < Check your IP and try again",
 	"registration_description1": "As soon as the registration button is pressed, the registration will start.",
 	"registration_description2": "now you have 5 seconds to press and hold the device key (approx. 3 seconds) until the LED flashes green.",
 	"registration_description3": "When the LED flashes green, you can release the device key.",

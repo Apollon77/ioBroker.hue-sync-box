@@ -22,6 +22,7 @@
 	"open_registration": "Pole rejestracji",
 	"registration_Notice": "Prosimy o wpisanie nazwy i adresu IP w celu aktywacji rejestracji.",
 	"registration_button": "Rejestracja",
+	"registration_dataError": "Błąd rejestracji > %s < Sprawdź swoje IP i spróbuj ponownie",
 	"registration_description1": "Zaraz po naciśnięciu przycisku rejestracji rozpocznie się rejestracja.",
 	"registration_description2": "Teraz masz 5 sekund, aby nacisnąć i przytrzymać przycisk urządzenia (ok. 3 sekundy), aż dioda LED zacznie migać na zielono.",
 	"registration_description3": "Gdy dioda LED miga na zielono, można zwolnić klucz urządzenia.",
