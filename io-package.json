@@ -1,22 +1,8 @@
 {
 	"common": {
 		"name": "hue-sync-box",
-		"version": "0.1.0",
-		"news": {
-			"0.1.0": {
-				"en": "First release",
-				"de": "Erste Veröffentlichung",
-				"ru": "Первый выпуск",
-				"pt": "Primeira versão",
-				"nl": "Eerste release",
-				"fr": "Première version",
-				"it": "Prima versione",
-				"es": "Primera versión",
-				"pl": "Pierwsze wydanie",
-				"uk": "Перший реліз",
-				"zh-cn": "第一个版本"
-			}
-		},
+		"version": "0.0.1",
+		"news": {},
 		"title": "Hue Sync Box",
 		"titleLang": {
 			"en": "Hue Sync Box",
