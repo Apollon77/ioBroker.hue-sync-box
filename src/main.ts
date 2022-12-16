@@ -1,5 +1,4 @@
 // hue-sync-box API https://developers.meethue.com/develop/hue-entertainment/hue-hdmi-sync-box-api/#Device%20Discovery
-// TODO: https://stackoverflow.com/questions/72546658/change-entertainment-area-via-hue-sync-box-api || https://brushknight.medium.com/philips-hue-sync-box-with-home-assistant-dcbcbd2e5cc0
 
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
