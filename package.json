@@ -1,7 +1,7 @@
 {
   "name": "iobroker.hue-sync-box",
-  "version": "0.0.1",
-  "description": "",
+  "version": "0.1.0",
+  "description": "An adapter to read and control the Philips Hue Sync Box",
   "author": {
     "name": "Issi",
     "email": "issi.dev.iobroker@gmail.com"
@@ -9,9 +9,12 @@
   "homepage": "https://github.com/xXBJXx/ioBroker.hue-sync-box",
   "license": "MIT",
   "keywords": [
-    "ioBroker",
-    "Smart Home",
-    "home automation"
+    "philips",
+    "hue",
+    "led",
+    "light",
+    "sync",
+    "hue sync box"
   ],
   "repository": {
     "type": "git",
