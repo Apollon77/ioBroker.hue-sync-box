@@ -50,7 +50,7 @@
 		"platform": "Javascript/Node.js",
 		"main": "build/main.js",
 		"icon": "hueSyncBox.png",
-		"enabled": false,
+		"enabled": true,
 		"extIcon": "https://raw.githubusercontent.com/xXBJXx/ioBroker.hue-sync-box/main/admin/hueSyncBox.png",
 		"readme": "https://github.com/xXBJXx/ioBroker.hue-sync-box/blob/main/README.md",
 		"loglevel": "info",
@@ -76,7 +76,12 @@
 			{
 				"admin": ">=5.0.0"
 			}
-		]
+		],
+		"plugins": {
+			"sentry": {
+				"dsn": "https://717054a82229405cb70882f4c3dc379f@o384969.ingest.sentry.io/4504312799559680"
+			}
+		}
 	},
 	"protectedNative": [],
 	"encryptedNative": [],
