@@ -3,9 +3,9 @@
   "version": "0.0.1",
   "description": "",
   "author": {
-      "name": "Issi",
-      "email": "issi.dev.iobroker@gmail.com"
-    },
+    "name": "Issi",
+    "email": "issi.dev.iobroker@gmail.com"
+  },
   "homepage": "https://github.com/xXBJXx/ioBroker.hue-sync-box",
   "license": "MIT",
   "keywords": [
@@ -89,7 +89,7 @@
     "prebuild:react": "rimraf admin/build",
     "build:react": "build-adapter react",
     "watch:react": "build-adapter react --watch",
-    "test:axios" : "mocha test/axiosTest.mjs --exit",
+    "test:axios": "mocha test/axiosTest.mjs --exit",
     "test:ts": "mocha --config test/mocharc.custom.json src/**/*.test.ts",
     "test:package": "mocha test/package --exit",
     "test:integration": "mocha test/integration --exit",
