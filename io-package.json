@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "hue-sync-box",
-		"version": "0.2.0",
+		"version": "0.2.1",
 		"news": {
+			"0.2.1": {
+				"en": "typo corrected in README\nFixed a bug when sending commands to the box",
+				"de": "Rechtschreibfehler in der README korrigiert\nFehler behoben, der beim Senden von Befehlen an die Box auftrat",
+				"ru": "Орфографическая ошибка в README исправлена\nИсправлена ошибка при отправке команд на коробку",
+				"pt": "Erro ortográfico corrigido no README\nCorrigido um bug ao enviar comandos para a caixa",
+				"nl": "Spelfout gecorrigeerd in README\nFout verholpen bij het verzenden van opdrachten naar de doos",
+				"fr": "Erreur d'orthographe corrigée dans le README\nErreur corrigée lors de l'envoi de commandes à la boîte",
+				"it": "Errore ortografico corretto in README\nCorretto un bug durante l'invio di comandi alla scatola",
+				"es": "Error ortográfico corregido en README\nSe corrigió un error al enviar comandos a la caja",
+				"pl": "Poprawiono literówkę w README\nNaprawiono błąd podczas wysyłania poleceń do skrzynki",
+				"uk": "Орфографічна помилка в README виправлена\nВиправлена помилка при відправленні команд на коробку",
+				"zh-cn": "README中的拼写错误已修复\n在发送命令到盒子时修复了一个错误"
+			},
 			"0.2.0": {
 				"en": "Optimization and improvement of the registration process",
 				"de": "Optimierung und Verbesserung des Registrierungsprozesses",
