@@ -23,7 +23,7 @@ Hue luminaires.
 
 ### What can the adapter do?
 
-The adapter polls the Philips Hue Sync Box API every 10 seconds and updates the data points accordingly.
+The adapter polls the Philips Hue Sync Box API every 15 seconds and updates the data points accordingly.
 There are some data points that can change the settings of the Sync Box (e.g. the sync on/off switch, switch the HDMI inputs, etc.).
 Any change to the data points is immediately sent to the Philips Hue Sync Box and triggers an update of the data points.
 Multiple Philips Hue Sync boxes can be created at the same time.
@@ -73,6 +73,9 @@ Sentry Reporting is used from js-controller 3.0.
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (xXBJXx) typo corrected in README
+
 ### 0.2.1 (2022-12-17)
 * (xXBJXx) Fixed a bug when sending commands to the box
 
