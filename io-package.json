@@ -1,21 +1,8 @@
 {
 	"common": {
 		"name": "hue-sync-box",
-		"version": "0.2.1",
+		"version": "0.2.0",
 		"news": {
-			"0.2.1": {
-				"en": "Fixed a bug when sending commands to the box",
-				"de": "Fehler behoben, der beim Senden von Befehlen an die Box auftrat"",
-				"ru": "Исправлена ошибка при отправке команд на коробку",
-				"pt": "Corrigido um bug ao enviar comandos para a caixa",
-				"nl": "Een fout bij het verzenden van opdrachten naar de box is opgelost",
-				"fr": "Une erreur a été corrigée lors de l'envoi de commandes à la boîte",
-				"it": "Corretto un bug durante l'invio di comandi alla scatola",
-				"es": "Se corrigió un error al enviar comandos a la caja",
-				"pl": "Naprawiono błąd podczas wysyłania poleceń do skrzynki",
-				"uk": "Виправлено помилку при відправленні команд до коробки",
-				"zh-cn": "修复了向盒子发送命令时的错误"
-			},
 			"0.2.0": {
 				"en": "Optimization and improvement of the registration process",
 				"de": "Optimierung und Verbesserung des Registrierungsprozesses",
