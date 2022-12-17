@@ -29,7 +29,6 @@ const SettingsPageContent: React.FC = React.memo(() => {
 	};
 	const [systemConfigObj] = useIoBrokerObject('system.config');
 	const secret = systemConfigObj?.native?.secret || 'Zgfr56gFe87jJOM';
-	console.log('secret', secret);
 	return (
 		<React.Fragment>
 			<SettingPage

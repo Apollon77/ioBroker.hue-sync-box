@@ -33,37 +33,43 @@ class HueSyncBox extends utils.Adapter {
     this.on("message", this.onMessage.bind(this));
     this.on("unload", this.onUnload.bind(this));
     this.requestTimer = null;
+    this.registrationTimer = null;
+    this.messageHandlerTimer = null;
     this.subscribedStates = [];
     this.hueTarget = [];
     this.hdmiSource = [];
+    this.requestCounter = 0;
+    this.messageHandler = [];
   }
   async onReady() {
+    this.messageHandler = [];
     this.setState("info.connection", false, true);
     this.writeLog("create data", "debug");
-    await this.createStates();
     this.writeLog("request data", "debug");
     await this.request();
   }
   async request() {
-    try {
-      for (const devicesKey in this.config.devices) {
-        if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
-          const device = this.config.devices[devicesKey];
-          const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, "GET");
-          if (result.status === 200) {
-            this.setState("info.connection", true, true);
-            await this.writeState(result, parseInt(devicesKey));
-          }
+    for (const devicesKey in this.config.devices) {
+      if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
+        const device = this.config.devices[devicesKey];
+        const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, "GET");
+        if (!result) {
+          this.writeLog(`[request] no result found for ${device.ip} request is aborted`, "error");
+          break;
+        }
+        if (result && result.status === 200) {
+          this.writeLog(`[request] result found for ${device.ip}`, "debug");
+          this.setState("info.connection", true, true);
+          await this.writeState(result, parseInt(devicesKey));
         }
       }
-      if (this.requestTimer)
-        this.clearTimeout(this.requestTimer);
-      this.requestTimer = this.setTimeout(async () => {
-        await this.request();
-      }, 15e3);
-    } catch (error) {
-      this.writeLog(`request error: ${error} , stack: ${error.stack}`, "error");
     }
+    if (this.requestTimer)
+      this.clearTimeout(this.requestTimer);
+    this.requestTimer = this.setTimeout(async () => {
+      await this.request();
+      console.log("request");
+    }, 1e4);
   }
   async writeState(result, key) {
     try {
@@ -151,6 +157,9 @@ class HueSyncBox extends utils.Adapter {
           this.writeLog(`error: ${error.response.status} ${error.message} - Body malformed.`, "error");
         } else if (error.response.status === 401) {
           this.writeLog(`error: ${error.response.status} ${error.message} - Authentication failed`, "error");
+          if (error.response.data.code === 2) {
+            this.writeLog(`error: ${error.response.status} ${error.message} - Invalid Token`, "error");
+          }
           return error.response;
         } else if (error.response.status === 404) {
           this.writeLog(`error: ${error.response.status} ${error.message} - Invalid URL Path`, "error");
@@ -163,7 +172,7 @@ class HueSyncBox extends utils.Adapter {
           return error.response;
         }
       } else {
-        this.writeLog(`error Type ${error.name} error: ${error.code} Message: ${error.message}`, "error");
+        this.writeLog(`[apiCall] error Code: ${error.code} Message: ${error.message}`, "error");
       }
     }
   }
@@ -214,10 +223,24 @@ class HueSyncBox extends utils.Adapter {
             this.config.devices[key].token,
             "GET"
           );
+          if (!result) {
+            this.writeLog(
+              `[createStates] no result found for ${this.config.devices[key].ip} createStates is aborted`,
+              "error"
+            );
+            return;
+          }
           const data = result.data;
           if (data === void 0) {
             this.writeLog("no data received", "error");
             return;
+          }
+          if (result.status === 401) {
+            if (result.data.code === 2) {
+              this.writeLog("invalid token", "error");
+              return;
+            }
+            this.writeLog("Authentication failed", "error");
           }
           this.writeLog(`initializing Object creation`, "debug");
           if (!this.config.devices)
@@ -592,6 +615,10 @@ class HueSyncBox extends utils.Adapter {
     try {
       if (this.requestTimer)
         this.clearTimeout(this.requestTimer);
+      if (this.registrationTimer)
+        this.clearTimeout(this.registrationTimer);
+      if (this.messageHandlerTimer)
+        this.clearTimeout(this.messageHandlerTimer);
       this.setState("info.connection", false, true);
       callback();
     } catch (e) {
@@ -600,16 +627,52 @@ class HueSyncBox extends utils.Adapter {
   }
   writeLog(logText, logType) {
     try {
-      if (logType === "silly")
-        this.log.silly(logText);
-      if (logType === "info")
-        this.log.info(logText);
-      if (logType === "debug")
-        this.log.debug(logText);
-      if (logType === "warn")
-        this.log.warn(logText);
-      if (logType === "error")
-        this.log.error(logText);
+      if (logType === "warn" || logType === "error") {
+        if (this.messageHandler.length > 0) {
+          if (!this.messageHandler.find((message) => message.message === logText)) {
+            this.messageHandler.push({
+              severity: logType,
+              clearTimer: false,
+              message: logText
+            });
+            if (logType === "warn")
+              this.log.warn(logText);
+            if (logType === "error")
+              this.log.error(logText);
+            this.log.debug("messageHandler: " + JSON.stringify(this.messageHandler));
+          } else {
+            if (!this.messageHandler.find((message) => message.message === logText).clearTimer) {
+              this.messageHandler.find((message) => message.message === logText).clearTimer = true;
+              this.messageHandlerTimer = this.setTimeout(() => {
+                this.messageHandler.find((message) => message.message === logText).clearTimer = false;
+                this.messageHandler = this.messageHandler.filter(
+                  (message) => message.message !== logText
+                );
+                this.log.debug(`clear messageHandler for ${logText}`);
+              }, 3e5);
+            }
+            this.log.debug("messageHandler: " + JSON.stringify(this.messageHandler));
+          }
+        } else {
+          this.messageHandler.push({
+            severity: logType,
+            clearTimer: false,
+            message: logText
+          });
+          if (logType === "warn")
+            this.log.warn(logText);
+          if (logType === "error")
+            this.log.error(logText);
+          this.log.debug("messageHandler: " + JSON.stringify(this.messageHandler));
+        }
+      } else {
+        if (logType === "silly")
+          this.log.silly(logText);
+        if (logType === "info")
+          this.log.info(logText);
+        if (logType === "debug")
+          this.log.debug(logText);
+      }
     } catch (error) {
       this.log.error(`writeLog error: ${error} , stack: ${error.stack}`);
     }
@@ -631,66 +694,102 @@ class HueSyncBox extends utils.Adapter {
       return;
     }
   }
+  async registration(obj) {
+    this.requestCounter++;
+    try {
+      this.writeLog("start registrations", "info");
+      const device = obj.message;
+      const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
+      const agent = new https.Agent({
+        rejectUnauthorized: false
+      });
+      const registrations = await import_axios.default.post(
+        registrationsUrl,
+        {
+          appName: "ioBroker",
+          instanceName: `hue_sync_box_${device.name}`
+        },
+        {
+          httpsAgent: agent
+        }
+      );
+      if (registrations.status === 200) {
+        this.writeLog(`registration for ${device.name} was successful`, "info");
+        if (registrations.data.accessToken) {
+          if (obj.callback)
+            this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
+          this.requestCounter = 5;
+        }
+      }
+    } catch (error) {
+      console.log("new request counter: " + this.requestCounter);
+      if (error.code === "ETIMEDOUT") {
+        this.writeLog(`[onMessage] ${error.message} Stack: ${error.stack}`, "error");
+        const response = {
+          code: error.code,
+          message: error.message
+        };
+        if (obj.callback)
+          this.sendTo(obj.from, obj.command, response, obj.callback);
+        this.requestCounter = 5;
+        return;
+      }
+      if (error.response.status === 400) {
+        if (error.response.data.code === 16) {
+          const response = error.response.data;
+          this.writeLog(`[registration] Code: 16 => ${JSON.stringify(response)}`, "debug");
+        } else {
+          this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
+          const response = {
+            code: error.response.status,
+            codeString: error.code,
+            message: error.message,
+            responseMessage: error.response.statusText
+          };
+          if (obj.callback)
+            this.sendTo(obj.from, obj.command, response, obj.callback);
+          this.requestCounter = 5;
+        }
+      } else {
+        this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
+        const response = {
+          code: error.response.status,
+          codeString: error.code,
+          message: error.message,
+          responseMessage: error.response.statusText
+        };
+        if (obj.callback)
+          this.sendTo(obj.from, obj.command, response, obj.callback);
+        this.requestCounter = 5;
+      }
+    }
+    if (this.requestCounter < 5) {
+      this.registrationTimer = this.setTimeout(async () => {
+        await this.registration(obj);
+      }, 4e3);
+    } else {
+      if (this.registrationTimer)
+        this.clearTimeout(this.registrationTimer);
+      this.requestCounter = 0;
+      this.writeLog("registration failed", "error");
+      const response = {
+        code: 500,
+        message: "registration failed"
+      };
+      if (obj.callback)
+        this.sendTo(obj.from, obj.command, response, obj.callback);
+    }
+  }
   async onMessage(obj) {
     if (typeof obj === "object" && obj.message) {
       if (obj.command === "registrations") {
-        try {
-          const device = obj.message;
-          const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
-          const agent = new https.Agent({
-            rejectUnauthorized: false
-          });
-          const registrations = await import_axios.default.post(
-            registrationsUrl,
-            {
-              appName: "ioBroker",
-              instanceName: `hue_sync_box_${device.name}`
-            },
-            {
-              httpsAgent: agent
-            }
-          );
-          if (obj.callback)
-            this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
-        } catch (error) {
-          if (error.code === "ETIMEDOUT") {
-            this.writeLog(`[onMessage] ${error.message} Stack: ${error.stack}`, "error");
-            const response = {
-              code: error.code,
-              message: error.message
-            };
-            if (obj.callback)
-              this.sendTo(obj.from, obj.command, response, obj.callback);
-            return;
-          }
-          if (error.response.status === 400) {
-            if (error.response.data.code === 16) {
-              const response = error.response.data;
-              if (obj.callback)
-                this.sendTo(obj.from, obj.command, response, obj.callback);
-              console.log("response: ", response);
-            } else {
-              this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
-              const response = {
-                code: error.response.status,
-                codeString: error.code,
-                message: error.message,
-                responseMessage: error.response.statusText
-              };
-              if (obj.callback)
-                this.sendTo(obj.from, obj.command, response, obj.callback);
-            }
-          } else {
-            this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
-            const response = {
-              code: error.response.status,
-              codeString: error.code,
-              message: error.message,
-              responseMessage: error.response.statusText
-            };
-            if (obj.callback)
-              this.sendTo(obj.from, obj.command, response, obj.callback);
-          }
+        if (this.requestCounter === 0) {
+          this.requestCounter = 0;
+          await this.registration(obj);
+        } else {
+          if (this.registrationTimer)
+            this.clearTimeout(this.registrationTimer);
+          this.requestCounter = 0;
         }
       }
     }

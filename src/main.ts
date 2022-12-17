@@ -36,6 +36,10 @@ class HueSyncBox extends utils.Adapter {
 	private subscribedStates: string[];
 	private readonly hueTarget: { id: string; name: string }[];
 	private readonly hdmiSource: { id: string; name: string }[];
+	private registrationTimer: ioBroker.Timeout | null;
+	private requestCounter: number;
+	private messageHandler: any[];
+	private messageHandlerTimer: ioBroker.Timeout | null;
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
 			...options,
@@ -46,9 +50,13 @@ class HueSyncBox extends utils.Adapter {
 		this.on('message', this.onMessage.bind(this));
 		this.on('unload', this.onUnload.bind(this));
 		this.requestTimer = null;
+		this.registrationTimer = null;
+		this.messageHandlerTimer = null;
 		this.subscribedStates = [];
 		this.hueTarget = [];
 		this.hdmiSource = [];
+		this.requestCounter = 0;
+		this.messageHandler = [];
 	}
 
 	/**
@@ -56,36 +64,38 @@ class HueSyncBox extends utils.Adapter {
 	 */
 	private async onReady(): Promise<void> {
 		// Initialize your adapter here
+		this.messageHandler = [];
 		// Reset the connection indicator during startup
 		this.setState('info.connection', false, true);
 		this.writeLog('create data', 'debug');
-		await this.createStates();
+		// await this.createStates();
 		this.writeLog('request data', 'debug');
 		await this.request();
 	}
 	//
 	private async request(): Promise<void> {
-		try {
-			for (const devicesKey in this.config.devices) {
-				if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
-					const device = this.config.devices[devicesKey];
-					const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, 'GET');
-					if (result.status === 200) {
-						// await this.createStates();
-						this.setState('info.connection', true, true);
-						await this.writeState(result, parseInt(devicesKey));
-					}
+		for (const devicesKey in this.config.devices) {
+			if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
+				const device = this.config.devices[devicesKey];
+				const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, 'GET');
+				if (!result) {
+					this.writeLog(`[request] no result found for ${device.ip} request is aborted`, 'error');
+					break;
+				}
+				if (result && result.status === 200) {
+					this.writeLog(`[request] result found for ${device.ip}`, 'debug');
+					this.setState('info.connection', true, true);
+					await this.writeState(result, parseInt(devicesKey));
 				}
 			}
-
-			// timer for request of 15 seconds
-			if (this.requestTimer) this.clearTimeout(this.requestTimer);
-			this.requestTimer = this.setTimeout(async () => {
-				await this.request();
-			}, 15000);
-		} catch (error) {
-			this.writeLog(`request error: ${error} , stack: ${error.stack}`, 'error');
 		}
+
+		// timer for request of 10 seconds
+		if (this.requestTimer) this.clearTimeout(this.requestTimer);
+		this.requestTimer = this.setTimeout(async () => {
+			await this.request();
+			console.log('request');
+		}, 10000);
 	}
 
 	private async writeState(result: { data: ApiResult }, key: number): Promise<void> {
@@ -180,6 +190,9 @@ class HueSyncBox extends utils.Adapter {
 					this.writeLog(`error: ${error.response.status} ${error.message} - Body malformed.`, 'error');
 				} else if (error.response.status === 401) {
 					this.writeLog(`error: ${error.response.status} ${error.message} - Authentication failed`, 'error');
+					if (error.response.data.code === 2) {
+						this.writeLog(`error: ${error.response.status} ${error.message} - Invalid Token`, 'error');
+					}
 					return error.response;
 				} else if (error.response.status === 404) {
 					this.writeLog(`error: ${error.response.status} ${error.message} - Invalid URL Path`, 'error');
@@ -192,7 +205,7 @@ class HueSyncBox extends utils.Adapter {
 					return error.response;
 				}
 			} else {
-				this.writeLog(`error Type ${error.name} error: ${error.code} Message: ${error.message}`, 'error');
+				this.writeLog(`[apiCall] error Code: ${error.code} Message: ${error.message}`, 'error');
 			}
 		}
 	}
@@ -263,11 +276,24 @@ class HueSyncBox extends utils.Adapter {
 						this.config.devices[key].token,
 						'GET',
 					);
-
+					if (!result) {
+						this.writeLog(
+							`[createStates] no result found for ${this.config.devices[key].ip} createStates is aborted`,
+							'error',
+						);
+						return;
+					}
 					const data = result.data as ApiResult;
 					if (data === undefined) {
 						this.writeLog('no data received', 'error');
 						return;
+					}
+					if (result.status === 401) {
+						if (result.data.code === 2) {
+							this.writeLog('invalid token', 'error');
+							return;
+						}
+						this.writeLog('Authentication failed', 'error');
 					}
 					this.writeLog(`initializing Object creation`, 'debug');
 
@@ -721,6 +747,8 @@ class HueSyncBox extends utils.Adapter {
 		try {
 			// Here you must clear all timeouts or intervals that may still be active
 			if (this.requestTimer) this.clearTimeout(this.requestTimer);
+			if (this.registrationTimer) this.clearTimeout(this.registrationTimer);
+			if (this.messageHandlerTimer) this.clearTimeout(this.messageHandlerTimer);
 			this.setState('info.connection', false, true);
 			callback();
 		} catch (e) {
@@ -733,11 +761,56 @@ class HueSyncBox extends utils.Adapter {
 	 */
 	private writeLog(logText: string, logType: 'silly' | 'info' | 'debug' | 'warn' | 'error'): void {
 		try {
-			if (logType === 'silly') this.log.silly(logText);
-			if (logType === 'info') this.log.info(logText);
-			if (logType === 'debug') this.log.debug(logText);
-			if (logType === 'warn') this.log.warn(logText);
-			if (logType === 'error') this.log.error(logText);
+			if (logType === 'warn' || logType === 'error') {
+				if (this.messageHandler.length > 0) {
+					// check if the logText is not in the messageHandler
+					if (!this.messageHandler.find((message) => message.message === logText)) {
+						// push the logText to the messageHandler
+						this.messageHandler.push({
+							severity: logType,
+							clearTimer: false,
+							message: logText,
+						});
+						if (logType === 'warn') this.log.warn(logText);
+						if (logType === 'error') this.log.error(logText);
+						this.log.debug('messageHandler: ' + JSON.stringify(this.messageHandler));
+					} else {
+						if (!this.messageHandler.find((message) => message.message === logText).clearTimer) {
+							// set the clearTimer to true
+							this.messageHandler.find((message) => message.message === logText).clearTimer = true;
+							// set the clearTimer to false and clear the messageHandler for the logText after 5 min
+							this.messageHandlerTimer = this.setTimeout(() => {
+								this.messageHandler.find((message) => message.message === logText).clearTimer = false;
+								this.messageHandler = this.messageHandler.filter(
+									(message) => message.message !== logText,
+								);
+								this.log.debug(`clear messageHandler for ${logText}`);
+							}, 300000);
+						}
+						this.log.debug('messageHandler: ' + JSON.stringify(this.messageHandler));
+					}
+				} else {
+					// push the logText to the messageHandler
+					this.messageHandler.push({
+						severity: logType,
+						clearTimer: false,
+						message: logText,
+					});
+					if (logType === 'warn') this.log.warn(logText);
+					if (logType === 'error') this.log.error(logText);
+					this.log.debug('messageHandler: ' + JSON.stringify(this.messageHandler));
+				}
+			} else {
+				if (logType === 'silly') this.log.silly(logText);
+				if (logType === 'info') this.log.info(logText);
+				if (logType === 'debug') this.log.debug(logText);
+			}
+
+			// if (logType === 'silly') this.log.silly(logText);
+			// if (logType === 'info') this.log.info(logText);
+			// if (logType === 'debug') this.log.debug(logText);
+			// if (logType === 'warn') this.log.warn(logText);
+			// if (logType === 'error') this.log.error(logText);
 		} catch (error) {
 			this.log.error(`writeLog error: ${error} , stack: ${error.stack}`);
 		}
@@ -767,6 +840,93 @@ class HueSyncBox extends utils.Adapter {
 		}
 	}
 
+	private async registration(obj: ioBroker.Message): Promise<any> {
+		this.requestCounter++;
+		try {
+			this.writeLog('start registrations', 'info');
+			const device = obj.message as { ip: string; name: string };
+			const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
+
+			// create agent for https request
+			const agent = new https.Agent({
+				rejectUnauthorized: false,
+			});
+			// create the request with the agent and data
+			const registrations = await axios.post(
+				registrationsUrl,
+				{
+					appName: 'ioBroker',
+					instanceName: `hue_sync_box_${device.name}`,
+				},
+				{
+					httpsAgent: agent,
+				},
+			);
+			if (registrations.status === 200) {
+				this.writeLog(`registration for ${device.name} was successful`, 'info');
+
+				if (registrations.data.accessToken) {
+					if (obj.callback) this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
+					this.requestCounter = 5;
+				}
+			}
+		} catch (error) {
+			console.log('new request counter: ' + this.requestCounter);
+			if (error.code === 'ETIMEDOUT') {
+				this.writeLog(`[onMessage] ${error.message} Stack: ${error.stack}`, 'error');
+				const response = {
+					code: error.code,
+					message: error.message,
+				};
+				if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
+				this.requestCounter = 5;
+				return;
+			}
+			if (error.response.status === 400) {
+				if (error.response.data.code === 16) {
+					const response = error.response.data;
+					this.writeLog(`[registration] Code: 16 => ${JSON.stringify(response)}`, 'debug');
+				} else {
+					this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, 'error');
+					const response = {
+						code: error.response.status,
+						codeString: error.code,
+						message: error.message,
+						responseMessage: error.response.statusText,
+					};
+					if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
+					this.requestCounter = 5;
+				}
+			} else {
+				this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, 'error');
+				const response = {
+					code: error.response.status,
+					codeString: error.code,
+					message: error.message,
+					responseMessage: error.response.statusText,
+				};
+				if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
+				this.requestCounter = 5;
+			}
+		}
+
+		// create a new timer that runs until the box is registered or the requestCounter is 5
+		if (this.requestCounter < 5) {
+			this.registrationTimer = this.setTimeout(async () => {
+				await this.registration(obj);
+			}, 4000);
+		} else {
+			if (this.registrationTimer) this.clearTimeout(this.registrationTimer);
+			this.requestCounter = 0;
+			this.writeLog('registration failed', 'error');
+			const response = {
+				code: 500,
+				message: 'registration failed',
+			};
+			if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
+		}
+	}
+
 	// If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
 	// /**
 	//  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
@@ -775,62 +935,12 @@ class HueSyncBox extends utils.Adapter {
 	private async onMessage(obj: ioBroker.Message): Promise<void> {
 		if (typeof obj === 'object' && obj.message) {
 			if (obj.command === 'registrations') {
-				try {
-					// 	this.writeLog('start registrations', 'info');
-					const device = obj.message as { ip: string; name: string };
-					const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
-
-					// crate agent for https request
-					const agent = new https.Agent({
-						rejectUnauthorized: false,
-					});
-					// create the request with the agent and data
-					const registrations = await axios.post(
-						registrationsUrl,
-						{
-							appName: 'ioBroker',
-							instanceName: `hue_sync_box_${device.name}`,
-						},
-						{
-							httpsAgent: agent,
-						},
-					);
-					if (obj.callback) this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
-				} catch (error) {
-					if (error.code === 'ETIMEDOUT') {
-						this.writeLog(`[onMessage] ${error.message} Stack: ${error.stack}`, 'error');
-						const response = {
-							code: error.code,
-							message: error.message,
-						};
-						if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
-						return;
-					}
-					if (error.response.status === 400) {
-						if (error.response.data.code === 16) {
-							const response = error.response.data;
-							if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
-							console.log('response: ', response);
-						} else {
-							this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, 'error');
-							const response = {
-								code: error.response.status,
-								codeString: error.code,
-								message: error.message,
-								responseMessage: error.response.statusText,
-							};
-							if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
-						}
-					} else {
-						this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, 'error');
-						const response = {
-							code: error.response.status,
-							codeString: error.code,
-							message: error.message,
-							responseMessage: error.response.statusText,
-						};
-						if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
-					}
+				if (this.requestCounter === 0) {
+					this.requestCounter = 0;
+					await this.registration(obj);
+				} else {
+					if (this.registrationTimer) this.clearTimeout(this.registrationTimer);
+					this.requestCounter = 0;
 				}
 			}
 		}

@@ -21,6 +21,13 @@ The Philips Hue Sync Box is a device that allows you to synchronize the colors a
 computer screen. This is possible by the Sync Box detecting the colors and light effects of your screen and transmitting them to your Philips
 Hue luminaires.
 
+### What can the adapter do?
+
+The adapter polls the Philips Hue Sync Box API every 10 seconds and updates the data points accordingly.
+There are some data points that can change the settings of the Sync Box (e.g. the sync on/off switch, switch the HDMI inputs, etc.).
+Any change to the data points is immediately sent to the Philips Hue Sync Box and triggers an update of the data points.
+Multiple Philips Hue Sync boxes can be created at the same time.
+
 ## What is required to use the adapter?
 
 - Philips Hue Sync Box IP address (IPv4 only)
@@ -35,11 +42,10 @@ Hue luminaires.
    ![name_ip_token](admin/media/name_ip_token.png)
 4. Click on the button `register box` a new window will open, where you can register the box (see below)
    ![registration](admin/media/registration.png)
-5. As soon as the button `registration` is pressed, the process starts, then you have 5 seconds to press the button on the box and hold it for 
+5. As soon as the button `registration` is pressed, the process starts, then you have 30 seconds to press the button on the box and hold it for 
    about 3 seconds until the LED flashes green. (see below)
    ![registration](admin/media/registration_timer.png)
-6. as soon as the LED is flashing green, you have to click on the button 'Next' and you will get the token displayed, and it will be entered 
-   automatically in the token field. In the field Token. (see below)
+6. After you release the device key, after a few seconds will be displayed the token and inserted into the field. (see below)
    ![token](admin/media/registration_successful.png)
    ![token](admin/media/token.png)
 7. Now you can click on the button `add` and the box will be added, then you just have to click on the button `save` to save the config.
@@ -53,7 +59,7 @@ implemented in this adapter.
 
 When the adapter crashes, or another Code error happens, this error message that also appears in the ioBroker log is
 submitted to Sentry. When you
-allowed iobroker GmbH to collect diagnostic data then also your installation ID (this is just a unique ID without any
+allowed ioBroker GmbH to collect diagnostic data then also your installation ID (this is just a unique ID without any
 additional infos about you, email name or such)
 is included. This allows Sentry to group errors and show how many unique users are affected by such an error.
 All of this helps me to provide error free adapters that basically never crashs.
@@ -67,6 +73,9 @@ Sentry Reporting is used from js-controller 3.0.
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (xXBJXx) Optimization and improvement of the registration process
+
 ### 0.1.0 (2022-12-16)
 * (Issi) First release
 

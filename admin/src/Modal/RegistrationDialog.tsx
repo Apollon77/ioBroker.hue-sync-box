@@ -32,22 +32,28 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, 
 
 	const handleOpen = () => {
 		setOpen(true);
+		setRegistration(false);
 	};
-	const handleRegistration = (data) => {
+	const handleRegistration = (data: {
+		registrationId: any;
+		accessToken: string;
+		code: string | number;
+		message: any;
+		codeString: any;
+	}) => {
 		if (data) {
-			if (data.registrationId) {
+			console.log(data);
+			if (data.code === 500) {
+				setSuccess(false);
+				setRegistration(false);
+				setError(true);
+			}
+			if (data.accessToken) {
 				setCancel(true);
 				setSuccess(true);
 				setRegistration(false);
 				setError(false);
 				token(data.accessToken);
-			}
-
-			if (data.code === 16) {
-				setRegistration(true);
-				setSuccess(false);
-				setError(false);
-				setCancel(false);
 			}
 			if (data.code === 404) {
 				setRegistration(false);
@@ -55,8 +61,8 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, 
 				setError(false);
 				setCancel(false);
 				setDataError(true);
-				console.log(data.message);
-				console.log(data.codeString);
+				console.error(data.message);
+				console.error(data.codeString);
 			}
 			if (data.code === 'ETIMEDOUT') {
 				setRegistration(false);
@@ -64,7 +70,7 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, 
 				setError(false);
 				setCancel(false);
 				setDataError(true);
-				console.log(data.message);
+				console.error(data.message);
 			}
 		} else {
 			console.log('data ', data);
@@ -74,12 +80,13 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, 
 			setCancel(false);
 		}
 	};
-
-	const handleProgress = (percent) => {
-		if (percent === 100) {
+	const handleTimer = (data: boolean) => {
+		if (data) {
+			setRegistration(true);
+			setError(false);
+			setCancel(false);
 			setSuccess(false);
-			setRegistration(false);
-			setError(true);
+			setDataError(false);
 		}
 	};
 
@@ -103,6 +110,7 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, 
 						<Registration
 							config={config}
 							results={(data) => handleRegistration(data)}
+							timer={(data) => handleTimer(data)}
 							buttonName={t('registration_button')}
 						/>
 						<Typography variant="body2" color="text.secondary" component="p">
@@ -119,11 +127,9 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, 
 						</Typography>
 						{registration && (
 							<React.Fragment>
-								<RegistrationsTimer cancel={cancel} progress={(percent) => handleProgress(percent)} />
-								<Registration
-									config={config}
-									results={(data) => handleRegistration(data)}
-									buttonName={t('next')}
+								<RegistrationsTimer
+									cancel={cancel}
+									// progress={(percent) => handleProgress(percent)}
 								/>
 							</React.Fragment>
 						)}

@@ -25,38 +25,38 @@ function CircularProgressWithLabel(props: CircularProgressProps & { value: numbe
 	);
 }
 interface RegistrationsTimerProps {
-	progress: (percent: number) => void;
+	// progress: (percent: number) => void;
 	cancel: boolean;
 }
-let timer: any;
+let timer: NodeJS.Timeout;
 export const RegistrationsTimer: React.FC<RegistrationsTimerProps> = (props): JSX.Element => {
 	const [progress, setProgress] = React.useState(0);
-	const [time, setTime] = React.useState(5);
+	const [time, setTime] = React.useState(30);
 
 	React.useEffect(() => {
-		timer = setInterval(() => {
-			setProgress((prevProgress) => (prevProgress >= 100 ? 0 : prevProgress + 20));
-			setTime((prevTime) => (prevTime <= 0 ? 5 : prevTime - 1));
-		}, 1000);
-		return () => {
+		if (props.cancel) {
+			setProgress(0);
+			setTime(30);
 			if (timer) clearInterval(timer);
-		};
-	}, []);
-
+		}
+	}, [props.cancel]);
 	React.useEffect(() => {
 		if (progress === 100) {
-			if (timer) clearInterval(timer);
-			props.progress(progress);
+			setProgress(100);
+			setTime(0);
 		}
 	}, [progress]);
 
 	React.useEffect(() => {
-		if (props.cancel) {
+		timer = setInterval(() => {
+			setProgress((prevProgress) => (prevProgress > 96.67 ? 100 : prevProgress + 3.33));
+			setTime((prevTime) => (prevTime <= 0 ? 0 : prevTime - 1));
+		}, 1000);
+
+		return () => {
 			if (timer) clearInterval(timer);
-			setProgress(0);
-			setTime(5);
-		}
-	}, [props.cancel]);
+		};
+	}, []);
 
 	return (
 		<React.Fragment>
