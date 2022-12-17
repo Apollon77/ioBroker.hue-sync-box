@@ -206,6 +206,8 @@ class HueSyncBox extends utils.Adapter {
         [commandWord]: state.val
       });
       if (response.status === 200) {
+        if (this.requestTimer)
+          this.clearTimeout(this.requestTimer);
         this.writeLog(`${id} was changed to ${state.val}`, "debug");
         await this.setStateAsync(id, state.val, true);
         await this.request();

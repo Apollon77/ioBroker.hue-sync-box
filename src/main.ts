@@ -256,6 +256,7 @@ class HueSyncBox extends utils.Adapter {
 
 			// check if the request was successful
 			if (response.status === 200) {
+				if (this.requestTimer) this.clearTimeout(this.requestTimer);
 				this.writeLog(`${id} was changed to ${state.val}`, 'debug');
 				await this.setStateAsync(id, state.val, true);
 				// start call all the states to update the values

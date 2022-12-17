@@ -73,6 +73,9 @@ Sentry Reporting is used from js-controller 3.0.
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (xXBJXx) Fixed a bug when sending commands to the box
+
 ### 0.2.0 (2022-12-17)
 * (xXBJXx) Optimization and improvement of the registration process
 
