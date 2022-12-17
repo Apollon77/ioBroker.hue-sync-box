@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "hue-sync-box",
-		"version": "0.1.0",
+		"version": "0.2.0",
 		"news": {
+			"0.2.0": {
+				"en": "Optimization and improvement of the registration process",
+				"de": "Optimierung und Verbesserung des Registrierungsprozesses",
+				"ru": "Оптимизация и улучшение процесса регистрации",
+				"pt": "Optimização e melhoria do processo de registo",
+				"nl": "Optimalisering en verbetering van het registratieproces",
+				"fr": "Optimisation et amélioration du processus d'enregistrement",
+				"it": "Ottimizzazione e miglioramento del processo di registrazione",
+				"es": "Optimización y mejora del proceso de registro",
+				"pl": "Optymalizacja i usprawnienie procesu rejestracji",
+				"uk": "Оптимізація та вдосконалення процесу реєстрації",
+				"zh-cn": "优化和改进注册程序"
+			},
 			"0.1.0": {
 				"en": "First release",
 				"de": "Erste Veröffentlichung",
