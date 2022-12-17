@@ -68,7 +68,7 @@ class HueSyncBox extends utils.Adapter {
 		// Reset the connection indicator during startup
 		this.setState('info.connection', false, true);
 		this.writeLog('create data', 'debug');
-		// await this.createStates();
+		await this.createStates();
 		this.writeLog('request data', 'debug');
 		await this.request();
 	}
@@ -94,8 +94,7 @@ class HueSyncBox extends utils.Adapter {
 		if (this.requestTimer) this.clearTimeout(this.requestTimer);
 		this.requestTimer = this.setTimeout(async () => {
 			await this.request();
-			console.log('request');
-		}, 10000);
+		}, 15000);
 	}
 
 	private async writeState(result: { data: ApiResult }, key: number): Promise<void> {

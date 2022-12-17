@@ -45,6 +45,7 @@ class HueSyncBox extends utils.Adapter {
     this.messageHandler = [];
     this.setState("info.connection", false, true);
     this.writeLog("create data", "debug");
+    await this.createStates();
     this.writeLog("request data", "debug");
     await this.request();
   }
@@ -68,8 +69,7 @@ class HueSyncBox extends utils.Adapter {
       this.clearTimeout(this.requestTimer);
     this.requestTimer = this.setTimeout(async () => {
       await this.request();
-      console.log("request");
-    }, 1e4);
+    }, 15e3);
   }
   async writeState(result, key) {
     try {
