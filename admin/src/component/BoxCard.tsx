@@ -13,7 +13,7 @@ export interface TabletCardProps {
 	item: ioBroker.Devices;
 	index: number;
 	editModal: (value: { open: boolean; index: number | null; oldRow?: ioBroker.Devices }) => void;
-	deleteModal: (value: { open: boolean; name: string }) => void;
+	deleteModal: (value: { open: boolean; device: ioBroker.Devices }) => void;
 }
 
 export const BoxCard: React.FC<TabletCardProps> = ({ secret, item, index, editModal, deleteModal }): JSX.Element => {
@@ -162,7 +162,7 @@ export const BoxCard: React.FC<TabletCardProps> = ({ secret, item, index, editMo
 							sx={{
 								color: red[500],
 							}}
-							onClick={() => deleteModal({ open: true, name: item.name })}
+							onClick={() => deleteModal({ open: true, device: item })}
 							aria-label={t('delete')}
 						>
 							<Delete />

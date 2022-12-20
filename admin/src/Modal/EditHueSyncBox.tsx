@@ -29,6 +29,7 @@ export const EditHueSyncBox: React.FC<EditModalProps> = ({
 			name: '',
 			ip: '',
 			token: '',
+			id: 0,
 		},
 	);
 	const { translate: t } = useI18n();
@@ -40,6 +41,7 @@ export const EditHueSyncBox: React.FC<EditModalProps> = ({
 				name: row.name,
 				ip: row.ip,
 				token: encrypt(secret, row.token),
+				id: row.id,
 			};
 			newRow(newConfig, index);
 		}

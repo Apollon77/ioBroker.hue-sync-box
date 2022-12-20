@@ -15,9 +15,17 @@ let newRow: any = [];
 export const SettingPage: React.FC<SettingPageProps> = ({ onChange, settings, secret }): JSX.Element => {
 	const { alive } = useAdapter();
 
-	const [showConfirmDialog, setShowConfirmDialog] = useState({
+	const [showConfirmDialog, setShowConfirmDialog] = useState<{
+		open: boolean;
+		device: ioBroker.Devices;
+	}>({
 		open: false,
-		name: '',
+		device: {
+			name: '',
+			ip: '',
+			token: '',
+			id: 0,
+		},
 	});
 	const [editModal, setEditModal] = useState<{
 		open: boolean;
@@ -49,7 +57,7 @@ export const SettingPage: React.FC<SettingPageProps> = ({ onChange, settings, se
 	const handleDeleteRow = (name: string): void => {
 		const newRows = settings.devices.filter((row) => row.name !== name);
 		newRow = [];
-		setShowConfirmDialog({ open: false, name: '' });
+		setShowConfirmDialog({ open: false, device: { name: '', ip: '', token: '', id: 0 } });
 		onChange('devices', newRows);
 	};
 
@@ -80,9 +88,12 @@ export const SettingPage: React.FC<SettingPageProps> = ({ onChange, settings, se
 						secret={secret}
 					/>
 					<DeleteConfirmModal
+						alive={alive}
 						show={showConfirmDialog.open}
-						name={showConfirmDialog.name}
-						onClose={() => setShowConfirmDialog({ open: false, name: '' })}
+						device={showConfirmDialog.device}
+						onClose={() =>
+							setShowConfirmDialog({ open: false, device: { name: '', ip: '', token: '', id: 0 } })
+						}
 						onDelete={(name) => handleDeleteRow(name)}
 					/>
 					{settings.devices.map((item, index) => {

@@ -51,6 +51,20 @@ Multiple Philips Hue Sync boxes can be created at the same time.
 7. Now you can click on the button `add` and the box will be added, then you just have to click on the button `save` to save the config.
    ![Adapter_GUI](admin/media/Adapter_GUI.png)
 
+## Delete the hue sync box from the adapter
+### Attention! For the deletion with the options to work, the token must have been created via the registration function of the adapter.
+
+1. Open the adapter configuration and click on the button "Delete" Trash can icon.
+2. a new window opens with 2 options select the option you want to use. If none of the options is selected, the box will only be deleted from 
+   config. (see below) 
+   - `deregister from the box` - the box will be deleted from the adapter and the token will be deleted from the box
+   - `delete object` - the box will be deleted from the adapter and the objects will be deleted from the ioBroker
+     ![delete_box](admin/media/delete_device.png)
+   
+you can also select both options at the same time then the box is deleted from the adapter and the objects are deleted from the ioBroker and 
+the token is deleted from the box.
+
+
 ## Sentry
 ### What is Sentry.io and what is reported to the servers of that company?
 
@@ -62,7 +76,7 @@ submitted to Sentry. When you
 allowed ioBroker GmbH to collect diagnostic data then also your installation ID (this is just a unique ID without any
 additional infos about you, email name or such)
 is included. This allows Sentry to group errors and show how many unique users are affected by such an error.
-All of this helps me to provide error free adapters that basically never crashs.
+All of this helps me to provide error free adapters that basically never crashs. 
 
 For more details and information on how to disable error reporting, please refer to the
 [Sentry plugin documentation](https://github.com/ioBroker/plugin-sentry#plugin-sentry) <br>
@@ -73,6 +87,10 @@ Sentry Reporting is used from js-controller 3.0.
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (xXBJXx) added delete function for objects and Token
+* (xXBJXx) added funktion for sync the `execution.intensity` state
+
 ### 0.2.1 (2022-12-17)
 * (xXBJXx) typo corrected in README
 * (xXBJXx) Fixed a bug when sending commands to the box

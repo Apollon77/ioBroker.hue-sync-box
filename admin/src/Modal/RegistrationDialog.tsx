@@ -17,11 +17,15 @@ import { orange } from '@mui/material/colors';
 
 interface RegistrationDialogProps {
 	config: { name: string; ip: string; token: string };
-	token: (token: string) => void;
+	resultData: (data: { registrationId: string; accessToken: string }) => void;
 	disabled: boolean;
 }
 
-export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, token, disabled }): JSX.Element => {
+export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({
+	config,
+	resultData,
+	disabled,
+}): JSX.Element => {
 	const { translate: t } = useI18n();
 	const [registration, setRegistration] = React.useState(false);
 	const [error, setError] = React.useState(false);
@@ -35,7 +39,7 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, 
 		setRegistration(false);
 	};
 	const handleRegistration = (data: {
-		registrationId: any;
+		registrationId: string;
 		accessToken: string;
 		code: string | number;
 		message: any;
@@ -53,7 +57,7 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({ config, 
 				setSuccess(true);
 				setRegistration(false);
 				setError(false);
-				token(data.accessToken);
+				resultData(data);
 			}
 			if (data.code === 404) {
 				setRegistration(false);

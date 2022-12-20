@@ -576,8 +576,7 @@ const executionObj = {
         passthrough: "passthrough",
         video: "video",
         game: "game",
-        music: "music",
-        ambient: "ambient"
+        music: "music"
       }
     },
     native: {}
@@ -595,8 +594,7 @@ const executionObj = {
       states: {
         video: "video",
         game: "game",
-        music: "music",
-        ambient: "ambient"
+        music: "music"
       }
     },
     native: {}

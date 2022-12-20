@@ -50,13 +50,13 @@ export interface Hue {
 		| 'streaming';
 }
 export interface Execution {
-	mode: 'powersave' | 'passthrough' | 'video' | 'game' | 'music' | 'ambient'; // (More modes can be added in the future, so clients must gracefully handle modes they don’t recognize)
+	mode: 'powersave' | 'passthrough' | 'video' | 'game' | 'music'; // (More modes can be added in the future, so clients must gracefully handle modes they don’t recognize)
 	syncActive: boolean;
 	hdmiActive: boolean;
 	hdmiSource: 'input1' | 'input2' | 'input3' | 'input4'; // (currently selected hdmi input)
 	hueTarget: string;
 	brightness: number;
-	lastSyncMode: 'video' | 'game' | 'music' | 'ambient';
+	lastSyncMode: 'video' | 'game' | 'music';
 	video: {
 		intensity: 'subtle' | 'moderate' | 'high' | 'intense';
 		backgroundLighting: boolean;

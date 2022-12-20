@@ -35,6 +35,7 @@ export const AddHueSyncBox: React.FC<AddHueSyncBoxProps> = ({ alive, settings, n
 		name: '',
 		ip: '',
 		token: '',
+		id: 0,
 	});
 	const [alert, setAlert] = useState({
 		message: '',
@@ -60,6 +61,7 @@ export const AddHueSyncBox: React.FC<AddHueSyncBoxProps> = ({ alive, settings, n
 					name: row.name,
 					ip: row.ip,
 					token: encrypt(secret, row.token),
+					id: row.id,
 				};
 
 				newRow(encryptedRow);
@@ -80,6 +82,7 @@ export const AddHueSyncBox: React.FC<AddHueSyncBoxProps> = ({ alive, settings, n
 			name: '',
 			ip: '',
 			token: '',
+			id: 0,
 		});
 		setAlert({ message: '', open: false });
 		setValidIp(false);
@@ -95,6 +98,7 @@ export const AddHueSyncBox: React.FC<AddHueSyncBoxProps> = ({ alive, settings, n
 			name: '',
 			ip: '',
 			token: '',
+			id: 0,
 		});
 		setAlert({ message: '', open: false });
 		setValidIp(false);
@@ -130,15 +134,29 @@ export const AddHueSyncBox: React.FC<AddHueSyncBoxProps> = ({ alive, settings, n
 		}
 	};
 
-	const handleTokenChange = (value: string): void => {
-		if (value !== '') {
-			setToken(value);
-			setRow({ ...row, token: value });
-			setValidToken(true);
-		} else {
-			setToken('');
-			setRow({ ...row, token: '' });
-			setValidToken(false);
+	const handleResultData = (
+		value: { registrationId: string; accessToken: string } | string,
+		attr: 'change' | 'registration',
+	): void => {
+		if (attr === 'change') {
+			if (typeof value === 'string') {
+				if (value !== '') {
+					setToken(value);
+					setRow({ ...row, token: value });
+					setValidToken(true);
+				} else {
+					setToken('');
+					setRow({ ...row, token: '' });
+					setValidToken(false);
+				}
+			}
+		}
+		if (attr === 'registration') {
+			if (typeof value === 'object') {
+				setToken(value.accessToken);
+				setRow({ ...row, token: value.accessToken, id: parseInt(value.registrationId) });
+				setValidToken(true);
+			}
 		}
 	};
 
@@ -243,7 +261,7 @@ export const AddHueSyncBox: React.FC<AddHueSyncBoxProps> = ({ alive, settings, n
 							>
 								<PasswordInput
 									value={token}
-									onChange={(value) => handleTokenChange(value)}
+									onChange={(value) => handleResultData(value, 'change')}
 									label={t('tokenInput')}
 									required={true}
 									error={!validToken}
@@ -282,7 +300,7 @@ export const AddHueSyncBox: React.FC<AddHueSyncBoxProps> = ({ alive, settings, n
 							) : null}
 							<RegistrationDialog
 								config={{ name: name, ip: ip, token: token }}
-								token={(value) => handleTokenChange(value)}
+								resultData={(value) => handleResultData(value, 'registration')}
 								disabled={registrationDisabled}
 							/>
 						</Grid>

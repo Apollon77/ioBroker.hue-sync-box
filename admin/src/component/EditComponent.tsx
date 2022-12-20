@@ -20,6 +20,7 @@ export const EditComponent: React.FC<RowProps> = ({ secret, newRow, oldRow, vali
 			name: '',
 			ip: '',
 			token: '',
+			id: 0,
 		};
 	}
 	const { translate: t } = useI18n();
@@ -34,13 +35,6 @@ export const EditComponent: React.FC<RowProps> = ({ secret, newRow, oldRow, vali
 	React.useEffect(() => {
 		valid(validIp && validToken);
 	}, [validIp, validToken]);
-
-	// React.useEffect(() => {
-	// 	if (ip.length !== 0 && token.length !== 0) {
-	// 		setValidIp(true);
-	// 		setValidToken(true);
-	// 	}
-	// }, []);
 
 	useEffect(() => {
 		// check if a change was made to the newRow

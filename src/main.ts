@@ -40,6 +40,7 @@ class HueSyncBox extends utils.Adapter {
 	private requestCounter: number;
 	private messageHandler: any[];
 	private messageHandlerTimer: ioBroker.Timeout | null;
+	private oldResult: any[];
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({
 			...options,
@@ -57,6 +58,7 @@ class HueSyncBox extends utils.Adapter {
 		this.hdmiSource = [];
 		this.requestCounter = 0;
 		this.messageHandler = [];
+		this.oldResult = [];
 	}
 
 	/**
@@ -142,6 +144,27 @@ class HueSyncBox extends utils.Adapter {
 												);
 											}
 										} else {
+											if (
+												resultKey === 'execution' &&
+												valueObjKey === 'intensity' &&
+												valueKey === data.execution.lastSyncMode
+											) {
+												this.writeLog(
+													`write state for ${resultKey}.${valueObjKey} with value ${value[valueObjKey]} from ${resultKey}.${valueKey}.${valueObjKey}`,
+													'debug',
+												);
+												const mode = data.execution
+													.lastSyncMode as ApiResult['execution']['lastSyncMode'];
+												await this.setStateAsync(
+													`box_${await replaceFunktion(
+														this.config.devices[key].name,
+													)}.${resultKey}.${valueObjKey}`,
+													{
+														val: data.execution[mode].intensity,
+														ack: true,
+													},
+												);
+											}
 											await this.setStateAsync(
 												`box_${await replaceFunktion(
 													this.config.devices[key].name,
@@ -310,7 +333,9 @@ class HueSyncBox extends utils.Adapter {
 						common: {
 							name: this.config.devices[key].name,
 						},
-						native: {},
+						native: {
+							id: this.config.devices[key].id ? this.config.devices[key].id : 'no id',
+						},
 					});
 
 					this.writeLog(`creating channel and states for device`, 'debug');
@@ -741,22 +766,6 @@ class HueSyncBox extends utils.Adapter {
 	}
 
 	/**
-	 * Is called when adapter shuts down - callback has to be called under any circumstances!
-	 */
-	private onUnload(callback: () => void): void {
-		try {
-			// Here you must clear all timeouts or intervals that may still be active
-			if (this.requestTimer) this.clearTimeout(this.requestTimer);
-			if (this.registrationTimer) this.clearTimeout(this.registrationTimer);
-			if (this.messageHandlerTimer) this.clearTimeout(this.messageHandlerTimer);
-			this.setState('info.connection', false, true);
-			callback();
-		} catch (e) {
-			callback();
-		}
-	}
-
-	/**
 	 * @description a function for log output
 	 */
 	private writeLog(logText: string, logType: 'silly' | 'info' | 'debug' | 'warn' | 'error'): void {
@@ -816,30 +825,6 @@ class HueSyncBox extends utils.Adapter {
 		}
 	}
 
-	/**
-	 * Is called if a subscribed state changes
-	 */
-	private async onStateChange(id: string, state: ioBroker.State | null | undefined): Promise<void> {
-		if (state) {
-			if (state.from === 'system.adapter.' + this.namespace) {
-				// ignore the state change from the adapter itself
-				return;
-			} else {
-				this.writeLog(`state ${id} changed: ${state.val} (ack = ${state.ack})`, 'debug');
-				if (state.ack) return; // ignore the state change from the adapter itself
-				// remove the adapter name from the id
-				const idWithoutAdapterName = id.replace(this.namespace + '.', '');
-				// check if the state is in subscribedStates
-				if (this.subscribedStates.includes(idWithoutAdapterName)) {
-					// send the command to the box
-					await this.sendCommand(idWithoutAdapterName, state);
-				}
-			}
-		} else {
-			return;
-		}
-	}
-
 	private async registration(obj: ioBroker.Message): Promise<any> {
 		this.requestCounter++;
 		try {
@@ -871,7 +856,6 @@ class HueSyncBox extends utils.Adapter {
 				}
 			}
 		} catch (error) {
-			console.log('new request counter: ' + this.requestCounter);
 			if (error.code === 'ETIMEDOUT') {
 				this.writeLog(`[onMessage] ${error.message} Stack: ${error.stack}`, 'error');
 				const response = {
@@ -927,6 +911,173 @@ class HueSyncBox extends utils.Adapter {
 		}
 	}
 
+	private async requestRegistrationsId(obj: ioBroker.Message): Promise<number | null> {
+		try {
+			const device = obj.message as { ip: string; name: string; token: string; id: number };
+			let registrationsId = null;
+			this.writeLog(`request registrations id for ${device.name}`, 'info');
+			const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
+			const agent = new https.Agent({ rejectUnauthorized: false });
+			const registrations = await axios.get(registrationsUrl, {
+				headers: {
+					Authorization: `Bearer ${this.decrypt(device.token)}`,
+					'Content-Type': 'application/json',
+				},
+				httpsAgent: agent,
+			});
+			if (registrations.status === 200) {
+				this.writeLog(`request registrations id for ${device.name} was successful`, 'info');
+				for (const index in registrations.data) {
+					const instanceName = `hue_sync_box_${device.name}`;
+
+					if (registrations.data[index].instanceName === instanceName) {
+						this.writeLog(`registrations id for ${device.name} is ${index}`, 'info');
+						registrationsId = parseInt(index, 10);
+					}
+				}
+			}
+			return registrationsId;
+		} catch (error) {
+			this.writeLog(`[callRegistrationsId] ${error.message} Stack: ${error.stack}`, 'error');
+			return null;
+		}
+	}
+
+	private async deleteRegistrations(obj: ioBroker.Message): Promise<any> {
+		try {
+			const device = obj.message as { ip: string; name: string; token: string; id: number };
+			if (device.id == 0 || device.id == undefined || device.id == null) {
+				const id = await this.requestRegistrationsId(obj);
+				if (id != null) {
+					console.log('deleteRegistrations new id', id);
+					device.id = id;
+				} else {
+					this.writeLog('no id found', 'error');
+					const response = {
+						code: 500,
+						message: 'no id found',
+					};
+					if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
+					return;
+				}
+			}
+			if (!device.id) {
+				this.writeLog('no id found', 'error');
+				const response = {
+					code: 500,
+					message: 'no id found',
+				};
+				if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
+				return;
+			}
+			this.writeLog(`delete registrations for ${device.name}`, 'info');
+			const deleteUrl = `https://${device.ip}/api/v1/registrations/${device.id}`;
+			const deleteConfig = {
+				method: 'delete',
+				url: deleteUrl,
+				headers: {
+					Authorization: `Bearer ${this.decrypt(device.token)}`,
+					'Content-Type': 'application/json',
+				},
+				httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+			};
+			const deleteResponse = await axios(deleteConfig);
+			if (deleteResponse.status === 200) {
+				this.writeLog(`registration for ${device.name} was deleted`, 'info');
+				if (obj.command === 'deleteObjectsAndLogOut') {
+					const status = { delete: true, logOut: true };
+					if (obj.callback) this.sendTo(obj.from, obj.command, status, obj.callback);
+				} else {
+					const status = { delete: false, logOut: true };
+					if (obj.callback) this.sendTo(obj.from, obj.command, status, obj.callback);
+				}
+			} else {
+				this.writeLog(
+					`[logOut]  delete registration for ${device.name} failed with status ${deleteResponse.status}`,
+					'error',
+				);
+			}
+		} catch (error) {
+			this.writeLog(`[logOut] ${error.message} Stack: ${error.stack}`, 'error');
+		}
+	}
+
+	private async deleteObjects(obj: ioBroker.Message): Promise<any> {
+		try {
+			const device = obj.message as { ip: string; name: string; token: string; id: number };
+			if (device.id == 0 || device.id == undefined || device.id == null) {
+				const id = await this.requestRegistrationsId(obj);
+				if (id != null) {
+					console.log('deleteObjects new id', id);
+					device.id = id;
+				} else {
+					this.writeLog('no id found', 'error');
+					const response = {
+						code: 500,
+						message: 'no id found',
+					};
+					if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
+					return;
+				}
+			}
+			if (!device.id) {
+				this.writeLog('no id found', 'error');
+				const response = {
+					code: 500,
+					message: 'no id found',
+				};
+				if (obj.callback) this.sendTo(obj.from, obj.command, response, obj.callback);
+				return;
+			}
+			this.writeLog(`delete objects for ${device.name}`, 'info');
+			const objects = await this.getAdapterObjectsAsync();
+			const deviceObjects: ioBroker.AdapterScopedObject[] = [];
+			if (objects) {
+				Object.keys(objects).filter((key) => {
+					this.writeLog(`search for all device objects`, 'info');
+					if (objects[key].type === 'device') {
+						deviceObjects.push(objects[key]);
+					}
+				});
+				if (deviceObjects.length > 0) {
+					const deviceObject = deviceObjects.find((obj) => {
+						this.writeLog(`check if the native id ${device.id} is present`, 'info');
+						if ((obj.native && obj.native.id === 'no id') || !obj.native.id) {
+							this.writeLog(`no id in native available`, 'info');
+							this.writeLog(`search for the names ${device.name}`, 'info');
+							if (obj.common.name === device.name) {
+								this.writeLog(`Name found`, 'info');
+								return obj;
+							}
+						}
+						if (obj.native && obj.native.id === device.id) {
+							this.writeLog(`id found`, 'info');
+							return obj;
+						}
+					});
+					if (deviceObject) {
+						// // delete the device object
+						await this.delObjectAsync(deviceObject._id, { recursive: true });
+						this.writeLog(`device object for ${device.name} was deleted`, 'info');
+						if (obj.command === 'deleteObjectsAndLogOut') {
+							this.writeLog(`delete registration for ${device.name}`, 'info');
+							await this.deleteRegistrations(obj);
+						} else {
+							this.writeLog(
+								`delete objects for ${device.name} was finished send status to the Frontend`,
+								'info',
+							);
+							const status = { delete: true, logOut: false };
+							if (obj.callback) this.sendTo(obj.from, obj.command, status, obj.callback);
+						}
+					}
+				}
+			}
+		} catch (error) {
+			this.writeLog(`[deleteObjects] ${error.message} Stack: ${error.stack}`, 'error');
+		}
+	}
+
 	// If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
 	// /**
 	//  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
@@ -943,6 +1094,55 @@ class HueSyncBox extends utils.Adapter {
 					this.requestCounter = 0;
 				}
 			}
+			if (obj.command === 'deleteObjects') {
+				await this.deleteObjects(obj);
+			}
+			if (obj.command === 'logOut') {
+				await this.deleteRegistrations(obj);
+			}
+			if (obj.command === 'deleteObjectsAndLogOut') {
+				await this.deleteObjects(obj);
+			}
+		}
+	}
+
+	/**
+	 * Is called if a subscribed state changes
+	 */
+	private async onStateChange(id: string, state: ioBroker.State | null | undefined): Promise<void> {
+		if (state) {
+			if (state.from === 'system.adapter.' + this.namespace) {
+				// ignore the state change from the adapter itself
+				return;
+			} else {
+				this.writeLog(`state ${id} changed: ${state.val} (ack = ${state.ack})`, 'debug');
+				if (state.ack) return; // ignore the state change from the adapter itself
+				// remove the adapter name from the id
+				const idWithoutAdapterName = id.replace(this.namespace + '.', '');
+				// check if the state is in subscribedStates
+				if (this.subscribedStates.includes(idWithoutAdapterName)) {
+					// send the command to the box
+					await this.sendCommand(idWithoutAdapterName, state);
+				}
+			}
+		} else {
+			return;
+		}
+	}
+
+	/**
+	 * Is called when adapter shuts down - callback has to be called under any circumstances!
+	 */
+	private onUnload(callback: () => void): void {
+		try {
+			// Here you must clear all timeouts or intervals that may still be active
+			if (this.requestTimer) this.clearTimeout(this.requestTimer);
+			if (this.registrationTimer) this.clearTimeout(this.registrationTimer);
+			if (this.messageHandlerTimer) this.clearTimeout(this.messageHandlerTimer);
+			this.setState('info.connection', false, true);
+			callback();
+		} catch (e) {
+			callback();
 		}
 	}
 }

@@ -40,6 +40,7 @@ class HueSyncBox extends utils.Adapter {
     this.hdmiSource = [];
     this.requestCounter = 0;
     this.messageHandler = [];
+    this.oldResult = [];
   }
   async onReady() {
     this.messageHandler = [];
@@ -114,6 +115,22 @@ class HueSyncBox extends utils.Adapter {
                         );
                       }
                     } else {
+                      if (resultKey === "execution" && valueObjKey === "intensity" && valueKey === data.execution.lastSyncMode) {
+                        this.writeLog(
+                          `write state for ${resultKey}.${valueObjKey} with value ${value[valueObjKey]} from ${resultKey}.${valueKey}.${valueObjKey}`,
+                          "debug"
+                        );
+                        const mode = data.execution.lastSyncMode;
+                        await this.setStateAsync(
+                          `box_${await (0, import_replaceFunktion.replaceFunktion)(
+                            this.config.devices[key].name
+                          )}.${resultKey}.${valueObjKey}`,
+                          {
+                            val: data.execution[mode].intensity,
+                            ack: true
+                          }
+                        );
+                      }
                       await this.setStateAsync(
                         `box_${await (0, import_replaceFunktion.replaceFunktion)(
                           this.config.devices[key].name
@@ -254,7 +271,9 @@ class HueSyncBox extends utils.Adapter {
             common: {
               name: this.config.devices[key].name
             },
-            native: {}
+            native: {
+              id: this.config.devices[key].id ? this.config.devices[key].id : "no id"
+            }
           });
           this.writeLog(`creating channel and states for device`, "debug");
           await this.setObjectNotExistsAsync(`box_${name}.device`, {
@@ -613,20 +632,6 @@ class HueSyncBox extends utils.Adapter {
       this.writeLog(`[createObjects] ${error.message} Stack: ${error.stack}`, "error");
     }
   }
-  onUnload(callback) {
-    try {
-      if (this.requestTimer)
-        this.clearTimeout(this.requestTimer);
-      if (this.registrationTimer)
-        this.clearTimeout(this.registrationTimer);
-      if (this.messageHandlerTimer)
-        this.clearTimeout(this.messageHandlerTimer);
-      this.setState("info.connection", false, true);
-      callback();
-    } catch (e) {
-      callback();
-    }
-  }
   writeLog(logText, logType) {
     try {
       if (logType === "warn" || logType === "error") {
@@ -679,23 +684,6 @@ class HueSyncBox extends utils.Adapter {
       this.log.error(`writeLog error: ${error} , stack: ${error.stack}`);
     }
   }
-  async onStateChange(id, state) {
-    if (state) {
-      if (state.from === "system.adapter." + this.namespace) {
-        return;
-      } else {
-        this.writeLog(`state ${id} changed: ${state.val} (ack = ${state.ack})`, "debug");
-        if (state.ack)
-          return;
-        const idWithoutAdapterName = id.replace(this.namespace + ".", "");
-        if (this.subscribedStates.includes(idWithoutAdapterName)) {
-          await this.sendCommand(idWithoutAdapterName, state);
-        }
-      }
-    } else {
-      return;
-    }
-  }
   async registration(obj) {
     this.requestCounter++;
     try {
@@ -724,7 +712,6 @@ class HueSyncBox extends utils.Adapter {
         }
       }
     } catch (error) {
-      console.log("new request counter: " + this.requestCounter);
       if (error.code === "ETIMEDOUT") {
         this.writeLog(`[onMessage] ${error.message} Stack: ${error.stack}`, "error");
         const response = {
@@ -782,6 +769,175 @@ class HueSyncBox extends utils.Adapter {
         this.sendTo(obj.from, obj.command, response, obj.callback);
     }
   }
+  async requestRegistrationsId(obj) {
+    try {
+      const device = obj.message;
+      let registrationsId = null;
+      this.writeLog(`request registrations id for ${device.name}`, "info");
+      const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
+      const agent = new https.Agent({ rejectUnauthorized: false });
+      const registrations = await import_axios.default.get(registrationsUrl, {
+        headers: {
+          Authorization: `Bearer ${this.decrypt(device.token)}`,
+          "Content-Type": "application/json"
+        },
+        httpsAgent: agent
+      });
+      if (registrations.status === 200) {
+        this.writeLog(`request registrations id for ${device.name} was successful`, "info");
+        for (const index in registrations.data) {
+          const instanceName = `hue_sync_box_${device.name}`;
+          if (registrations.data[index].instanceName === instanceName) {
+            this.writeLog(`registrations id for ${device.name} is ${index}`, "info");
+            registrationsId = parseInt(index, 10);
+          }
+        }
+      }
+      return registrationsId;
+    } catch (error) {
+      this.writeLog(`[callRegistrationsId] ${error.message} Stack: ${error.stack}`, "error");
+      return null;
+    }
+  }
+  async deleteRegistrations(obj) {
+    try {
+      const device = obj.message;
+      if (device.id == 0 || device.id == void 0 || device.id == null) {
+        const id = await this.requestRegistrationsId(obj);
+        if (id != null) {
+          console.log("deleteRegistrations new id", id);
+          device.id = id;
+        } else {
+          this.writeLog("no id found", "error");
+          const response = {
+            code: 500,
+            message: "no id found"
+          };
+          if (obj.callback)
+            this.sendTo(obj.from, obj.command, response, obj.callback);
+          return;
+        }
+      }
+      if (!device.id) {
+        this.writeLog("no id found", "error");
+        const response = {
+          code: 500,
+          message: "no id found"
+        };
+        if (obj.callback)
+          this.sendTo(obj.from, obj.command, response, obj.callback);
+        return;
+      }
+      this.writeLog(`delete registrations for ${device.name}`, "info");
+      const deleteUrl = `https://${device.ip}/api/v1/registrations/${device.id}`;
+      const deleteConfig = {
+        method: "delete",
+        url: deleteUrl,
+        headers: {
+          Authorization: `Bearer ${this.decrypt(device.token)}`,
+          "Content-Type": "application/json"
+        },
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
+      };
+      const deleteResponse = await (0, import_axios.default)(deleteConfig);
+      if (deleteResponse.status === 200) {
+        this.writeLog(`registration for ${device.name} was deleted`, "info");
+        if (obj.command === "deleteObjectsAndLogOut") {
+          const status = { delete: true, logOut: true };
+          if (obj.callback)
+            this.sendTo(obj.from, obj.command, status, obj.callback);
+        } else {
+          const status = { delete: false, logOut: true };
+          if (obj.callback)
+            this.sendTo(obj.from, obj.command, status, obj.callback);
+        }
+      } else {
+        this.writeLog(
+          `[logOut]  delete registration for ${device.name} failed with status ${deleteResponse.status}`,
+          "error"
+        );
+      }
+    } catch (error) {
+      this.writeLog(`[logOut] ${error.message} Stack: ${error.stack}`, "error");
+    }
+  }
+  async deleteObjects(obj) {
+    try {
+      const device = obj.message;
+      if (device.id == 0 || device.id == void 0 || device.id == null) {
+        const id = await this.requestRegistrationsId(obj);
+        if (id != null) {
+          console.log("deleteObjects new id", id);
+          device.id = id;
+        } else {
+          this.writeLog("no id found", "error");
+          const response = {
+            code: 500,
+            message: "no id found"
+          };
+          if (obj.callback)
+            this.sendTo(obj.from, obj.command, response, obj.callback);
+          return;
+        }
+      }
+      if (!device.id) {
+        this.writeLog("no id found", "error");
+        const response = {
+          code: 500,
+          message: "no id found"
+        };
+        if (obj.callback)
+          this.sendTo(obj.from, obj.command, response, obj.callback);
+        return;
+      }
+      this.writeLog(`delete objects for ${device.name}`, "info");
+      const objects = await this.getAdapterObjectsAsync();
+      const deviceObjects = [];
+      if (objects) {
+        Object.keys(objects).filter((key) => {
+          this.writeLog(`search for all device objects`, "info");
+          if (objects[key].type === "device") {
+            deviceObjects.push(objects[key]);
+          }
+        });
+        if (deviceObjects.length > 0) {
+          const deviceObject = deviceObjects.find((obj2) => {
+            this.writeLog(`check if the native id ${device.id} is present`, "info");
+            if (obj2.native && obj2.native.id === "no id" || !obj2.native.id) {
+              this.writeLog(`no id in native available`, "info");
+              this.writeLog(`search for the names ${device.name}`, "info");
+              if (obj2.common.name === device.name) {
+                this.writeLog(`Name found`, "info");
+                return obj2;
+              }
+            }
+            if (obj2.native && obj2.native.id === device.id) {
+              this.writeLog(`id found`, "info");
+              return obj2;
+            }
+          });
+          if (deviceObject) {
+            await this.delObjectAsync(deviceObject._id, { recursive: true });
+            this.writeLog(`device object for ${device.name} was deleted`, "info");
+            if (obj.command === "deleteObjectsAndLogOut") {
+              this.writeLog(`delete registration for ${device.name}`, "info");
+              await this.deleteRegistrations(obj);
+            } else {
+              this.writeLog(
+                `delete objects for ${device.name} was finished send status to the Frontend`,
+                "info"
+              );
+              const status = { delete: true, logOut: false };
+              if (obj.callback)
+                this.sendTo(obj.from, obj.command, status, obj.callback);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      this.writeLog(`[deleteObjects] ${error.message} Stack: ${error.stack}`, "error");
+    }
+  }
   async onMessage(obj) {
     if (typeof obj === "object" && obj.message) {
       if (obj.command === "registrations") {
@@ -794,6 +950,46 @@ class HueSyncBox extends utils.Adapter {
           this.requestCounter = 0;
         }
       }
+      if (obj.command === "deleteObjects") {
+        await this.deleteObjects(obj);
+      }
+      if (obj.command === "logOut") {
+        await this.deleteRegistrations(obj);
+      }
+      if (obj.command === "deleteObjectsAndLogOut") {
+        await this.deleteObjects(obj);
+      }
+    }
+  }
+  async onStateChange(id, state) {
+    if (state) {
+      if (state.from === "system.adapter." + this.namespace) {
+        return;
+      } else {
+        this.writeLog(`state ${id} changed: ${state.val} (ack = ${state.ack})`, "debug");
+        if (state.ack)
+          return;
+        const idWithoutAdapterName = id.replace(this.namespace + ".", "");
+        if (this.subscribedStates.includes(idWithoutAdapterName)) {
+          await this.sendCommand(idWithoutAdapterName, state);
+        }
+      }
+    } else {
+      return;
+    }
+  }
+  onUnload(callback) {
+    try {
+      if (this.requestTimer)
+        this.clearTimeout(this.requestTimer);
+      if (this.registrationTimer)
+        this.clearTimeout(this.registrationTimer);
+      if (this.messageHandlerTimer)
+        this.clearTimeout(this.messageHandlerTimer);
+      this.setState("info.connection", false, true);
+      callback();
+    } catch (e) {
+      callback();
     }
   }
 }

@@ -7,6 +7,7 @@ declare global {
 			name: string;
 			ip: string;
 			token: string;
+			id: number;
 		}
 		interface AdapterConfig {
 			devices: Devices[];
