@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "hue-sync-box",
-		"version": "0.2.1",
+		"version": "0.3.0",
 		"news": {
+			"0.3.0": {
+				"en": "added delete function for objects and Token\nadded funktion for sync the `execution.intensity` state",
+				"de": "Löschfunktion für Objekte und Token hinzugefügt\nFunktion zur Synchronisierung des Zustands `execution.intensity` hinzugefügt",
+				"ru": "добавлена функция удаления для объектов и Token\nдобавлена функция для синхронизации состояния `execution.intensity`.",
+				"pt": "acrescentada função de apagar objectos e Token\nadicionado funktion para sincronizar o estado `execution.intensity",
+				"nl": "verwijderfunctie toegevoegd voor objecten en Token\nfunctie toegevoegd voor het synchroniseren van de `execution.intensity` status",
+				"fr": "ajout d'une fonction de suppression pour les objets et les Token\najout d'une fonction pour synchroniser l'état `execution.intensity`.",
+				"it": "aggiunta la funzione di cancellazione per gli oggetti e i token\naggiunta funzione per la sincronizzazione dello stato `execution.intensity",
+				"es": "dodano funkcję usuwania obiektów i Tokenów\ndodano funkcję synchronizacji stanu `execution.intensity`.",
+				"pl": "dodano funkcję usuwania obiektów i Tokenów\ndodano funkcję synchronizacji stanu `execution.intensity`.",
+				"uk": "додано функцію видалення для об'єктів та Token\nдодано функцію синхронізації стану `execution.intensity` (інтенсивність виконання)",
+				"zh-cn": "增加了对象和令牌的删除功能\n增加了同步 `execution.intensity` 状态的功能"
+			},
 			"0.2.1": {
 				"en": "typo corrected in README\nFixed a bug when sending commands to the box",
 				"de": "Rechtschreibfehler in der README korrigiert\nFehler behoben, der beim Senden von Befehlen an die Box auftrat",
