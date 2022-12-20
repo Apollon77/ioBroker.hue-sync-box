@@ -189,6 +189,26 @@ class HueSyncBox extends utils.Adapter {
           return error.response;
         }
       } else {
+        if (error.code === "ECONNREFUSED") {
+          this.writeLog(`error: ${error.code} - Connection refused Message: ${error.message}`, "error");
+          return error;
+        }
+        if (error.code === "ECONNRESET") {
+          this.writeLog(`error: ${error.code} - Connection reset by peer Message: ${error.message}`, "error");
+          return error;
+        }
+        if (error.code === "ETIMEDOUT") {
+          this.writeLog(`error: ${error.code} - Connection timed out Message: ${error.message}`, "error");
+          return error;
+        }
+        if (error.code === "ENOTFOUND") {
+          this.writeLog(`error: ${error.code} - DNS lookup failed Message: ${error.message}`, "error");
+          return error;
+        }
+        if (error.code === "EHOSTUNREACH") {
+          this.writeLog(`error: ${error.code} - Host is unreachable Message: ${error.message}`, "error");
+          return error;
+        }
         this.writeLog(`[apiCall] error Code: ${error.code} Message: ${error.message}`, "error");
       }
     }
@@ -709,6 +729,7 @@ class HueSyncBox extends utils.Adapter {
           if (obj.callback)
             this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
           this.requestCounter = 5;
+          return;
         }
       }
     } catch (error) {
@@ -738,6 +759,7 @@ class HueSyncBox extends utils.Adapter {
           if (obj.callback)
             this.sendTo(obj.from, obj.command, response, obj.callback);
           this.requestCounter = 5;
+          return;
         }
       } else {
         this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
@@ -750,6 +772,7 @@ class HueSyncBox extends utils.Adapter {
         if (obj.callback)
           this.sendTo(obj.from, obj.command, response, obj.callback);
         this.requestCounter = 5;
+        return;
       }
     }
     if (this.requestCounter < 5) {
@@ -867,7 +890,6 @@ class HueSyncBox extends utils.Adapter {
       if (device.id == 0 || device.id == void 0 || device.id == null) {
         const id = await this.requestRegistrationsId(obj);
         if (id != null) {
-          console.log("deleteObjects new id", id);
           device.id = id;
         } else {
           this.writeLog("no id found", "error");
@@ -894,8 +916,8 @@ class HueSyncBox extends utils.Adapter {
       const objects = await this.getAdapterObjectsAsync();
       const deviceObjects = [];
       if (objects) {
+        this.writeLog(`search for all device objects`, "debug");
         Object.keys(objects).filter((key) => {
-          this.writeLog(`search for all device objects`, "info");
           if (objects[key].type === "device") {
             deviceObjects.push(objects[key]);
           }
