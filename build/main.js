@@ -54,7 +54,7 @@ class HueSyncBox extends utils.Adapter {
     for (const devicesKey in this.config.devices) {
       if (Object.prototype.hasOwnProperty.call(this.config.devices, devicesKey)) {
         const device = this.config.devices[devicesKey];
-        const result = await this.apiCall(`https://${device.ip}/api/v1`, device.token, "GET");
+        const result = await this.apiCall(`https://${device.ip}/api/v1`, device, "GET");
         if (!result) {
           this.writeLog(`[request] no result found for ${device.ip} request is aborted`, "error");
           break;
@@ -153,13 +153,13 @@ class HueSyncBox extends utils.Adapter {
       this.writeLog(`writeState error: ${error} , stack: ${error.stack}`, "error");
     }
   }
-  async apiCall(url, token, method, data) {
+  async apiCall(url, device, method, data) {
     try {
       const config = {
         method,
         url,
         headers: {
-          Authorization: `Bearer ${this.decrypt(token)}`,
+          Authorization: `Bearer ${this.decrypt(device.token)}`,
           "Content-Type": "application/json"
         },
         httpsAgent: new https.Agent({ rejectUnauthorized: false }),
@@ -239,7 +239,7 @@ class HueSyncBox extends utils.Adapter {
       }
       this.writeLog(`assemble the url ${url}`, "debug");
       this.writeLog(`send the request to ${url}`, "debug");
-      const response = await this.apiCall(url, boxConfig.token, "put", {
+      const response = await this.apiCall(url, boxConfig, "put", {
         [commandWord]: state.val
       });
       if (response.status === 200) {
@@ -259,7 +259,7 @@ class HueSyncBox extends utils.Adapter {
         if (Object.prototype.hasOwnProperty.call(this.config.devices, key)) {
           const result = await this.apiCall(
             `https://${this.config.devices[key].ip}/api/v1`,
-            this.config.devices[key].token,
+            this.config.devices[key],
             "GET"
           );
           if (!result) {
