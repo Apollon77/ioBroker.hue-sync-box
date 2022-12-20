@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "hue-sync-box",
-		"version": "0.3.0",
+		"version": "0.3.1",
 		"news": {
+			"0.3.1": {
+				"en": "Fixed error message that occurs after a successful registration.",
+				"de": "Die Fehlermeldung, die nach einer erfolgreichen Registrierung auftritt, wurde behoben.",
+				"ru": "Исправлено сообщение об ошибке, возникающее после успешной регистрации.",
+				"pt": "Mensagem de erro corrigido que ocorre após um registo bem sucedido.",
+				"nl": "Foutmelding na succesvolle registratie opgelost.",
+				"fr": "Correction du message d'erreur qui se produit après un enregistrement réussi.",
+				"it": "Corretto il messaggio di errore che si verifica dopo una registrazione riuscita.",
+				"es": "Se ha corregido el mensaje de error que aparecía tras registrarse correctamente.",
+				"pl": "Naprawiono komunikat o błędzie pojawiający się po udanej rejestracji.",
+				"uk": "Виправлено повідомлення про помилку, що виникає після успішної реєстрації.",
+				"zh-cn": "修正了注册成功后出现的错误信息。"
+			},
 			"0.3.0": {
 				"en": "added delete function for objects and Token\nadded funktion for sync the `execution.intensity` state",
 				"de": "Löschfunktion für Objekte und Token hinzugefügt\nFunktion zur Synchronisierung des Zustands `execution.intensity` hinzugefügt",
