@@ -46,13 +46,6 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 		logOut: false,
 		functions: '',
 	});
-	const [error, setError] = React.useState<{
-		error: boolean;
-		message: string;
-	}>({
-		error: false,
-		message: '',
-	});
 
 	const handleClose = () => {
 		onClose();
