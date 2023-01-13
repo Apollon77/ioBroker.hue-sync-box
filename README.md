@@ -64,24 +64,6 @@ Multiple Philips Hue Sync boxes can be created at the same time.
 you can also select both options at the same time then the box is deleted from the adapter and the objects are deleted from the ioBroker and 
 the token is deleted from the box.
 
-
-## Sentry
-### What is Sentry.io and what is reported to the servers of that company?
-
-Sentry.io is a service for developers to get an overview about errors from their applications. And exactly this is
-implemented in this adapter.
-
-When the adapter crashes, or another Code error happens, this error message that also appears in the ioBroker log is
-submitted to Sentry. When you
-allowed ioBroker GmbH to collect diagnostic data then also your installation ID (this is just a unique ID without any
-additional infos about you, email name or such)
-is included. This allows Sentry to group errors and show how many unique users are affected by such an error.
-All of this helps me to provide error free adapters that basically never crashs. 
-
-For more details and information on how to disable error reporting, please refer to the
-[Sentry plugin documentation](https://github.com/ioBroker/plugin-sentry#plugin-sentry) <br>
-Sentry Reporting is used from js-controller 3.0.
-
 ## Changelog
 <!--
 	Placeholder for the next version (at the beginning of the line):
@@ -89,6 +71,10 @@ Sentry Reporting is used from js-controller 3.0.
 -->
 ### **WORK IN PROGRESS**
 * (xXBJXx) update dependencies
+* (xXBJXx) Log output extended and improved
+* (xXBJXx) Added data point for the response JSON
+* (xXBJXx) Added data point "Reachable" to check if the box is reachable
+
 ### 0.3.1 (2022-12-20)
 * (xXBJXx) Fixed error message that occurs after a successful registration.
 

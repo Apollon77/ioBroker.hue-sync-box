@@ -22,6 +22,7 @@ var import_object_definition = require("./lib/object_definition");
 var https = __toESM(require("https"));
 var import_axios = __toESM(require("axios"));
 var import_replaceFunktion = require("./lib/replaceFunktion");
+var import_register = require("source-map-support/register");
 class HueSyncBox extends utils.Adapter {
   constructor(options = {}) {
     super({
@@ -40,14 +41,13 @@ class HueSyncBox extends utils.Adapter {
     this.hdmiSource = [];
     this.requestCounter = 0;
     this.messageHandler = [];
-    this.oldResult = [];
   }
   async onReady() {
     this.messageHandler = [];
     this.setState("info.connection", false, true);
-    this.writeLog("create data", "debug");
+    this.writeLog(`[Adapter v.${this.version} onReady] create data`, `debug`);
     await this.createStates();
-    this.writeLog("request data", "debug");
+    this.writeLog(`[Adapter v.${this.version} onReady] request data`, `debug`);
     await this.request();
   }
   async request() {
@@ -56,13 +56,37 @@ class HueSyncBox extends utils.Adapter {
         const device = this.config.devices[devicesKey];
         const result = await this.apiCall(`https://${device.ip}/api/v1`, device, "GET");
         if (!result) {
-          this.writeLog(`[request] no result found for ${device.ip} request is aborted`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} request] no result found for ${device.ip} request is aborted`,
+            "error"
+          );
+          await this.setStateAsync(
+            `box_${await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[devicesKey].name)}.reachable`,
+            false,
+            true
+          );
           break;
         }
         if (result && result.status === 200) {
-          this.writeLog(`[request] result found for ${device.ip}`, "debug");
+          this.writeLog(`[Adapter v.${this.version} request] result found for ${device.ip}`, "debug");
           this.setState("info.connection", true, true);
           await this.writeState(result, parseInt(devicesKey));
+          await this.setStateAsync(
+            `box_${await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[devicesKey].name)}.reachable`,
+            true,
+            true
+          );
+        } else {
+          this.writeLog(
+            `[Adapter v.${this.version} request] no result found for ${device.ip} request is aborted`,
+            "error"
+          );
+          await this.setStateAsync(
+            `box_${await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[devicesKey].name)}.reachable`,
+            false,
+            true
+          );
+          break;
         }
       }
     }
@@ -73,74 +97,76 @@ class HueSyncBox extends utils.Adapter {
     }, 15e3);
   }
   async writeState(result, key) {
-    try {
-      const data = result.data;
-      if (data === void 0) {
-        this.writeLog("no data received", "error");
-        return;
-      }
-      this.writeLog(`prepare to write the data for ${this.config.devices[key].name}`, "debug");
-      for (const [resultKey, resultValue] of Object.entries(data)) {
-        if (typeof resultValue === "object") {
-          for (const [valueKey, value] of Object.entries(resultValue)) {
-            if (typeof value !== "object") {
-              if (resultKey !== "ir" && resultKey !== "registrations" && resultKey !== "presets") {
-                await this.setStateAsync(
-                  `box_${await (0, import_replaceFunktion.replaceFunktion)(
-                    this.config.devices[key].name
-                  )}.${resultKey}.${valueKey}`,
-                  {
-                    val: value,
-                    ack: true
-                  }
-                );
-              }
-            } else {
-              if (resultKey !== "ir" && resultKey !== "registrations" && resultKey !== "presets") {
-                for (const value1Key in value) {
-                  const valueObjKey = value1Key;
-                  if (Object.prototype.hasOwnProperty.call(value, valueObjKey)) {
-                    if (resultKey === "hue") {
-                      for (const [hueGroupKey, hueGroupValue] of Object.entries(
-                        value[valueObjKey]
-                      )) {
-                        await this.setStateAsync(
-                          `box_${await (0, import_replaceFunktion.replaceFunktion)(
-                            this.config.devices[key].name
-                          )}.${resultKey}.${valueKey}.${valueObjKey}.${hueGroupKey}`,
-                          {
-                            val: hueGroupValue,
-                            ack: true
-                          }
-                        );
-                      }
-                    } else {
-                      if (resultKey === "execution" && valueObjKey === "intensity" && valueKey === data.execution.lastSyncMode) {
-                        this.writeLog(
-                          `write state for ${resultKey}.${valueObjKey} with value ${value[valueObjKey]} from ${resultKey}.${valueKey}.${valueObjKey}`,
-                          "debug"
-                        );
-                        const mode = data.execution.lastSyncMode;
-                        await this.setStateAsync(
-                          `box_${await (0, import_replaceFunktion.replaceFunktion)(
-                            this.config.devices[key].name
-                          )}.${resultKey}.${valueObjKey}`,
-                          {
-                            val: data.execution[mode].intensity,
-                            ack: true
-                          }
-                        );
-                      }
+    const data = result.data;
+    if (data === void 0) {
+      this.writeLog(`[Adapter v.${this.version} writeState] no data received`, `error`);
+      return;
+    }
+    this.writeLog(
+      `[Adapter v.${this.version} writeState] prepare to write the data for ${this.config.devices[key].name}`,
+      "debug"
+    );
+    await this.setStateAsync(
+      `box_${await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[key].name)}.json`,
+      JSON.stringify(data),
+      true
+    );
+    for (const [resultKey, resultValue] of Object.entries(data)) {
+      if (typeof resultValue === "object") {
+        for (const [valueKey, value] of Object.entries(resultValue)) {
+          if (typeof value !== "object") {
+            if (resultKey !== "ir" && resultKey !== "registrations" && resultKey !== "presets") {
+              await this.setStateAsync(
+                `box_${await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[key].name)}.${resultKey}.${valueKey}`,
+                {
+                  val: value,
+                  ack: true
+                }
+              );
+            }
+          } else {
+            if (resultKey !== "ir" && resultKey !== "registrations" && resultKey !== "presets") {
+              for (const value1Key in value) {
+                const valueObjKey = value1Key;
+                if (Object.prototype.hasOwnProperty.call(value, valueObjKey)) {
+                  if (resultKey === "hue") {
+                    for (const [hueGroupKey, hueGroupValue] of Object.entries(value[valueObjKey])) {
                       await this.setStateAsync(
                         `box_${await (0, import_replaceFunktion.replaceFunktion)(
                           this.config.devices[key].name
-                        )}.${resultKey}.${valueKey}.${valueObjKey}`,
+                        )}.${resultKey}.${valueKey}.${valueObjKey}.${hueGroupKey}`,
                         {
-                          val: value[valueObjKey],
+                          val: hueGroupValue,
                           ack: true
                         }
                       );
                     }
+                  } else {
+                    if (resultKey === "execution" && valueObjKey === "intensity" && valueKey === data.execution.lastSyncMode) {
+                      this.writeLog(
+                        `[Adapter v.${this.version} writeState] write state for ${resultKey}.${valueObjKey} with value ${value[valueObjKey]} from ${resultKey}.${valueKey}.${valueObjKey}`,
+                        "debug"
+                      );
+                      const mode = data.execution.lastSyncMode;
+                      await this.setStateAsync(
+                        `box_${await (0, import_replaceFunktion.replaceFunktion)(
+                          this.config.devices[key].name
+                        )}.${resultKey}.${valueObjKey}`,
+                        {
+                          val: data.execution[mode].intensity,
+                          ack: true
+                        }
+                      );
+                    }
+                    await this.setStateAsync(
+                      `box_${await (0, import_replaceFunktion.replaceFunktion)(
+                        this.config.devices[key].name
+                      )}.${resultKey}.${valueKey}.${valueObjKey}`,
+                      {
+                        val: value[valueObjKey],
+                        ack: true
+                      }
+                    );
                   }
                 }
               }
@@ -148,10 +174,11 @@ class HueSyncBox extends utils.Adapter {
           }
         }
       }
-      this.writeLog(`all data for ${this.config.devices[key].name} written`, "debug");
-    } catch (error) {
-      this.writeLog(`writeState error: ${error} , stack: ${error.stack}`, "error");
     }
+    this.writeLog(
+      `[Adapter v.${this.version} writeState] all data for ${this.config.devices[key].name} written`,
+      "debug"
+    );
   }
   async apiCall(url, device, method, data) {
     try {
@@ -166,95 +193,140 @@ class HueSyncBox extends utils.Adapter {
         data
       };
       const response = await (0, import_axios.default)(config);
-      this.writeLog(`response: ${JSON.stringify(response.data)}`, "debug");
+      this.writeLog(
+        `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] response: ${JSON.stringify(
+          response.data
+        )}`,
+        "debug"
+      );
       return response;
     } catch (error) {
       if (error.response) {
         if (error.response.status === 400) {
-          this.writeLog(`error: ${error.response.status} ${error.message} - Body malformed.`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.response.status} ${error.message} - Body malformed.`,
+            "error"
+          );
         } else if (error.response.status === 401) {
-          this.writeLog(`error: ${error.response.status} ${error.message} - Authentication failed`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.response.status} ${error.message} - Authentication failed`,
+            "error"
+          );
           if (error.response.data.code === 2) {
-            this.writeLog(`error: ${error.response.status} ${error.message} - Invalid Token`, "error");
+            this.writeLog(
+              `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.response.status} ${error.message} - Invalid Token`,
+              "error"
+            );
           }
           return error.response;
         } else if (error.response.status === 404) {
-          this.writeLog(`error: ${error.response.status} ${error.message} - Invalid URL Path`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.response.status} ${error.message} - Invalid URL Path`,
+            "error"
+          );
           return error.response;
         } else if (error.response.status === 500) {
-          this.writeLog(`error: ${error.response.status} ${error.message} - internal server error`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.response.status} ${error.message} - internal server error`,
+            "error"
+          );
           return;
         } else {
-          this.writeLog(`error: ${error}`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error}`,
+            "error"
+          );
           return error.response;
         }
       } else {
         if (error.code === "ECONNREFUSED") {
-          this.writeLog(`error: ${error.code} - Connection refused Message: ${error.message}`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.code} - Connection refused Message: ${error.message}`,
+            "error"
+          );
           return error;
         }
         if (error.code === "ECONNRESET") {
-          this.writeLog(`error: ${error.code} - Connection reset by peer Message: ${error.message}`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.code} - Connection reset by peer Message: ${error.message}`,
+            "error"
+          );
           return error;
         }
         if (error.code === "ETIMEDOUT") {
-          this.writeLog(`error: ${error.code} - Connection timed out Message: ${error.message}`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.code} - Connection timed out Message: ${error.message}`,
+            "error"
+          );
           return error;
         }
         if (error.code === "ENOTFOUND") {
-          this.writeLog(`error: ${error.code} - DNS lookup failed Message: ${error.message}`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.code} - DNS lookup failed Message: ${error.message}`,
+            "error"
+          );
           return error;
         }
         if (error.code === "EHOSTUNREACH") {
-          this.writeLog(`error: ${error.code} - Host is unreachable Message: ${error.message}`, "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error: ${error.code} - Host is unreachable Message: ${error.message}`,
+            "error"
+          );
           return error;
         }
-        this.writeLog(`[apiCall] error Code: ${error.code} Message: ${error.message}`, "error");
+        this.writeLog(
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} apiCall] error Code: ${error.code} Message: ${error.message}`,
+          "error"
+        );
       }
     }
   }
   async sendCommand(id, state) {
-    try {
-      this.writeLog(`prepare to send the command for ${id}`, "debug");
-      const name = id.split(".")[0].replace("box_", "");
-      const channel = id.split(".")[1];
-      const channel2 = id.split(".")[2];
-      const commandWord = id.split(".").pop();
-      let boxConfig = null;
-      for (const devicesKey in this.config.devices) {
-        if (await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[devicesKey].name) === name) {
-          boxConfig = this.config.devices[devicesKey];
-        }
+    this.writeLog(`[Adapter v.${this.version} sendCommand] prepare to send the command for ${id}`, "debug");
+    const name = id.split(".")[0].replace("box_", "");
+    const channel = id.split(".")[1];
+    const channel2 = id.split(".")[2];
+    const commandWord = id.split(".").pop();
+    let boxConfig = null;
+    for (const devicesKey in this.config.devices) {
+      if (await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[devicesKey].name) === name) {
+        boxConfig = this.config.devices[devicesKey];
       }
-      this.writeLog(`get the boxConfig: ${JSON.stringify(boxConfig)}`, "debug");
-      if (!boxConfig) {
-        this.writeLog(`no boxConfig found for ${name}`, "error");
-        return;
-      }
-      let url;
-      if (commandWord === channel2) {
-        url = `https://${boxConfig.ip}/api/v1/${channel}`;
-      } else {
-        url = `https://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
-      }
-      this.writeLog(`assemble the url ${url}`, "debug");
-      this.writeLog(`send the request to ${url}`, "debug");
-      const response = await this.apiCall(url, boxConfig, "put", {
-        [commandWord]: state.val
-      });
-      if (response.status === 200) {
-        if (this.requestTimer)
-          this.clearTimeout(this.requestTimer);
-        this.writeLog(`${id} was changed to ${state.val}`, "debug");
-        await this.setStateAsync(id, state.val, true);
-        await this.request();
-      }
-    } catch (error) {
-      this.writeLog(`[sendCommand] ${error.message} Stack: ${error.stack}`, "error");
+    }
+    this.writeLog(
+      `[Adapter v.${this.version} sendCommand] get the boxConfig: ${JSON.stringify(boxConfig)}`,
+      "debug"
+    );
+    if (!boxConfig) {
+      this.writeLog(`[Adapter v.${this.version} sendCommand] no boxConfig found for ${name}`, "error");
+      return;
+    }
+    let url;
+    if (commandWord === channel2) {
+      url = `https://${boxConfig.ip}/api/v1/${channel}`;
+    } else {
+      url = `https://${boxConfig.ip}/api/v1/${channel}/${channel2}`;
+    }
+    this.writeLog(`[Adapter v.${this.version} sendCommand] assemble the url ${url}`, "debug");
+    this.writeLog(`[Adapter v.${this.version} sendCommand] send the request to ${url}`, "debug");
+    const response = await this.apiCall(url, boxConfig, "put", {
+      [commandWord]: state.val
+    });
+    if (response.status === 200) {
+      if (this.requestTimer)
+        this.clearTimeout(this.requestTimer);
+      this.writeLog(`[Adapter v.${this.version} sendCommand] ${id} was changed to ${state.val}`, "debug");
+      await this.setStateAsync(id, state.val, true);
+      await this.request();
+    } else {
+      this.writeLog(
+        `[Adapter v.${this.version} sendCommand] response status: ${response.status} - ${response.statusText}`,
+        "error"
+      );
     }
   }
   async createStates() {
-    try {
+    if (this.config.devices) {
       for (const key in this.config.devices) {
         if (Object.prototype.hasOwnProperty.call(this.config.devices, key)) {
           const result = await this.apiCall(
@@ -264,38 +336,73 @@ class HueSyncBox extends utils.Adapter {
           );
           if (!result) {
             this.writeLog(
-              `[createStates] no result found for ${this.config.devices[key].ip} createStates is aborted`,
+              `[Adapter v.${this.version} createObjects]  no result found for ${this.config.devices[key].ip} createStates is aborted`,
               "error"
             );
             return;
           }
           const data = result.data;
           if (data === void 0) {
-            this.writeLog("no data received", "error");
+            this.writeLog(`[Adapter v.${this.version} createObjects] no data received`, `error`);
             return;
           }
           if (result.status === 401) {
             if (result.data.code === 2) {
-              this.writeLog("invalid token", "error");
+              this.writeLog(`[Adapter v.${this.version} createObjects] invalid token`, `error`);
               return;
             }
-            this.writeLog("Authentication failed", "error");
+            this.writeLog(`[Adapter v.${this.version} createObjects] Authentication failed`, `error`);
           }
-          this.writeLog(`initializing Object creation`, "debug");
+          this.writeLog(`[Adapter v.${this.version} createObjects] initializing Object creation`, "debug");
           if (!this.config.devices)
             return this.writeLog(`No devices configured`, "warn");
           const name = await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[key].name);
-          this.writeLog(`creating device with Name  box_${name}`, "debug");
+          this.writeLog(
+            `[Adapter v.${this.version} createObjects] creating device with Name  box_${name}`,
+            "debug"
+          );
           await this.setObjectNotExistsAsync(`box_${name}`, {
             type: "device",
             common: {
-              name: this.config.devices[key].name
+              name: this.config.devices[key].name,
+              statusStates: {
+                onlineId: `${this.namespace}.box_${name}.reachable`
+              }
             },
             native: {
               id: this.config.devices[key].id ? this.config.devices[key].id : "no id"
             }
           });
-          this.writeLog(`creating channel and states for device`, "debug");
+          await this.setObjectNotExistsAsync(`box_${name}.json`, {
+            type: "state",
+            common: {
+              name: "response JSON",
+              desc: "The data JSON from the request",
+              type: "string",
+              role: "json",
+              def: "",
+              read: true,
+              write: false
+            },
+            native: {}
+          });
+          await this.setObjectNotExistsAsync(`box_${name}.reachable`, {
+            type: "state",
+            common: {
+              name: "reachable",
+              desc: "Is the box reachable",
+              type: "boolean",
+              role: "indicator.reachable",
+              def: false,
+              read: true,
+              write: false
+            },
+            native: {}
+          });
+          this.writeLog(
+            `[Adapter v.${this.version} createObjects] creating channel and states for device`,
+            "debug"
+          );
           await this.setObjectNotExistsAsync(`box_${name}.device`, {
             type: "channel",
             common: {
@@ -313,7 +420,10 @@ class HueSyncBox extends utils.Adapter {
               await this.setObjectNotExistsAsync(`box_${name}.device.${key2}`, import_object_definition.deviceStateObj[key2]);
               if (import_object_definition.deviceStateObj[key2].common.write) {
                 if (!this.subscribedStates.includes(`box_${name}.device.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.device.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} createObjects] subscribe state box_${name}.device.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.device.${key2}`);
                   this.subscribedStates.push(`box_${name}.device.${key2}`);
                 }
@@ -325,7 +435,10 @@ class HueSyncBox extends utils.Adapter {
               await this.setObjectNotExistsAsync(`box_${name}.device.wifi.${key2}`, import_object_definition.networkObj[key2]);
               if (import_object_definition.networkObj[key2].common.write) {
                 if (!this.subscribedStates.includes(`box_${name}.device.wifi.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.device.wifi.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} createObjects] subscribe state box_${name}.device.wifi.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.device.wifi.${key2}`);
                   this.subscribedStates.push(`box_${name}.device.wifi.${key2}`);
                 }
@@ -337,7 +450,10 @@ class HueSyncBox extends utils.Adapter {
               await this.setObjectNotExistsAsync(`box_${name}.device.update.${key2}`, import_object_definition.updateObj[key2]);
               if (import_object_definition.updateObj[key2].common.write) {
                 if (!this.subscribedStates.includes(`box_${name}.device.update.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.device.update.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} createObjects] subscribe state box_${name}.device.update.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.device.update.${key2}`);
                   this.subscribedStates.push(`box_${name}.device.update.${key2}`);
                 }
@@ -352,14 +468,20 @@ class HueSyncBox extends utils.Adapter {
               );
               if (import_object_definition.capabilitiesObj[key2].common.write) {
                 if (!this.subscribedStates.includes(`box_${name}.device.capabilities.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.device.capabilities.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} createObjects] subscribe state box_${name}.device.capabilities.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.device.capabilities.${key2}`);
                   this.subscribedStates.push(`box_${name}.device.capabilities.${key2}`);
                 }
               }
             }
           }
-          this.writeLog(`creating channel and states for hue`, "debug");
+          this.writeLog(
+            `[Adapter v.${this.version} createObjects] creating channel and states for hue`,
+            "debug"
+          );
           await this.setObjectNotExistsAsync(`box_${name}.hue`, {
             type: "channel",
             common: {
@@ -377,7 +499,10 @@ class HueSyncBox extends utils.Adapter {
               await this.setObjectNotExistsAsync(`box_${name}.hue.${key2}`, import_object_definition.hueObj[key2]);
               if (import_object_definition.hueObj[key2].common.write) {
                 if (!this.subscribedStates.includes(`box_${name}.hue.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.hue.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} createObjects] subscribe state box_${name}.hue.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.hue.${key2}`);
                   this.subscribedStates.push(`box_${name}.hue.${key2}`);
                 }
@@ -394,7 +519,7 @@ class HueSyncBox extends utils.Adapter {
                 if (import_object_definition.groupsObj[key2].common.write) {
                   if (!this.subscribedStates.includes(`box_${name}.hue.groups.${groupKey}.${key2}`)) {
                     this.writeLog(
-                      `subscribe state box_${name}.hue.groups.${groupKey}.${key2}`,
+                      `[Adapter v.${this.version} createObjects] subscribe state box_${name}.hue.groups.${groupKey}.${key2}`,
                       "debug"
                     );
                     this.subscribeStates(`box_${name}.hue.groups.${groupKey}.${key2}`);
@@ -404,7 +529,10 @@ class HueSyncBox extends utils.Adapter {
               }
             }
           }
-          this.writeLog(`creating channel and states for execution`, "debug");
+          this.writeLog(
+            `[Adapter v.${this.version} createObjects] creating channel and states for execution`,
+            "debug"
+          );
           await this.setObjectNotExistsAsync(`box_${name}.execution`, {
             type: "channel",
             common: {
@@ -450,7 +578,10 @@ class HueSyncBox extends utils.Adapter {
                   });
                 }
                 if (!this.subscribedStates.includes(`box_${name}.execution.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.execution.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} createObjects] subscribe state box_${name}.execution.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.execution.${key2}`);
                   this.subscribedStates.push(`box_${name}.execution.${key2}`);
                 }
@@ -485,7 +616,10 @@ class HueSyncBox extends utils.Adapter {
                   });
                 }
                 if (!this.subscribedStates.includes(`box_${name}.execution.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.execution.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} createObjects] subscribe state box_${name}.execution.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.execution.${key2}`);
                   this.subscribedStates.push(`box_${name}.execution.${key2}`);
                 }
@@ -493,7 +627,10 @@ class HueSyncBox extends utils.Adapter {
                 await this.setObjectNotExistsAsync(`box_${name}.execution.${key2}`, import_object_definition.executionObj[key2]);
                 if (import_object_definition.executionObj[key2].common.write) {
                   if (!this.subscribedStates.includes(`box_${name}.execution.${key2}`)) {
-                    this.writeLog(`subscribe state box_${name}.execution.${key2}`, "debug");
+                    this.writeLog(
+                      `[Adapter v.${this.version} createObjects] subscribe state box_${name}.execution.${key2}`,
+                      "debug"
+                    );
                     this.subscribeStates(`box_${name}.execution.${key2}`);
                     this.subscribedStates.push(`box_${name}.execution.${key2}`);
                   }
@@ -516,7 +653,7 @@ class HueSyncBox extends utils.Adapter {
                         `box_${name}.execution.${array[arrayKey]}.${key2}`
                       )) {
                         this.writeLog(
-                          `subscribe state box_${name}.execution.${array[arrayKey]}.${key2}`,
+                          `[Adapter v.${this.version} createObjects] subscribe state box_${name}.execution.${array[arrayKey]}.${key2}`,
                           "debug"
                         );
                         this.subscribeStates(`box_${name}.execution.${array[arrayKey]}.${key2}`);
@@ -539,7 +676,7 @@ class HueSyncBox extends utils.Adapter {
                         `box_${name}.execution.${array[arrayKey]}.${key2}`
                       )) {
                         this.writeLog(
-                          `subscribe state box_${name}.execution.${array[arrayKey]}.${key2}`,
+                          `[Adapter v.${this.version} createObjects] subscribe state box_${name}.execution.${array[arrayKey]}.${key2}`,
                           "debug"
                         );
                         this.subscribeStates(`box_${name}.execution.${array[arrayKey]}.${key2}`);
@@ -553,7 +690,10 @@ class HueSyncBox extends utils.Adapter {
               }
             }
           }
-          this.writeLog(`creating channel and states for hdmi`, "debug");
+          this.writeLog(
+            `[Adapter v.${this.version} createObjects] creating channel and states for hdmi`,
+            "debug"
+          );
           await this.setObjectNotExistsAsync(`box_${name}.hdmi`, {
             type: "channel",
             common: {
@@ -571,7 +711,10 @@ class HueSyncBox extends utils.Adapter {
               await this.setObjectNotExistsAsync(`box_${name}.hdmi.${key2}`, import_object_definition.hdmiObj[key2]);
               if (import_object_definition.hdmiObj[key2].common.write) {
                 if (!this.subscribedStates.includes(`box_${name}.hdmi.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.hdmi.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} createObjects] subscribe state box_${name}.hdmi.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.hdmi.${key2}`);
                   this.subscribedStates.push(`box_${name}.hdmi.${key2}`);
                 }
@@ -587,7 +730,10 @@ class HueSyncBox extends utils.Adapter {
                 );
                 if (import_object_definition.hdmiInputObj[key2].common.write) {
                   if (!this.subscribedStates.includes(`box_${name}.hdmi.input${i}.${key2}`)) {
-                    this.writeLog(`subscribe state box_${name}.hdmi.input${i}.${key2}`, "debug");
+                    this.writeLog(
+                      `[Adapter v.${this.version} createObjects] subscribe state box_${name}.hdmi.input${i}.${key2}`,
+                      "debug"
+                    );
                     this.subscribeStates(`box_${name}.hdmi.input${i}.${key2}`);
                     this.subscribedStates.push(`box_${name}.hdmi.input${i}.${key2}`);
                   }
@@ -597,13 +743,19 @@ class HueSyncBox extends utils.Adapter {
             await this.setObjectNotExistsAsync(`box_${name}.hdmi.output.${key2}`, import_object_definition.hdmiInputObj[key2]);
             if (import_object_definition.hdmiInputObj[key2].common.write) {
               if (!this.subscribedStates.includes(`box_${name}.hdmi.output.${key2}`)) {
-                this.writeLog(`subscribe state box_${name}.hdmi.output.${key2}`, "debug");
+                this.writeLog(
+                  `[Adapter v.${this.version} createObjects] subscribe state box_${name}.hdmi.output.${key2}`,
+                  "debug"
+                );
                 this.subscribeStates(`box_${name}.hdmi.output.${key2}`);
                 this.subscribedStates.push(`box_${name}.hdmi.output.${key2}`);
               }
             }
           }
-          this.writeLog(`creating channel and states for behavior`, "debug");
+          this.writeLog(
+            `[Adapter v.${this.version} createObjects] creating channel and states for behavior`,
+            "debug"
+          );
           await this.setObjectNotExistsAsync(`box_${name}.behavior`, {
             type: "channel",
             common: {
@@ -621,7 +773,10 @@ class HueSyncBox extends utils.Adapter {
               await this.setObjectNotExistsAsync(`box_${name}.behavior.${key2}`, import_object_definition.behaviorObj[key2]);
               if (import_object_definition.behaviorObj[key2].common.write) {
                 if (!this.subscribedStates.includes(`box_${name}.behavior.${key2}`)) {
-                  this.writeLog(`subscribe state box_${name}.behavior.${key2}`, "debug");
+                  this.writeLog(
+                    `[Adapter v.${this.version} createObjects] subscribe state box_${name}.behavior.${key2}`,
+                    "debug"
+                  );
                   this.subscribeStates(`box_${name}.behavior.${key2}`);
                   this.subscribedStates.push(`box_${name}.behavior.${key2}`);
                 }
@@ -637,7 +792,10 @@ class HueSyncBox extends utils.Adapter {
                 );
                 if (import_object_definition.behaviorInputObj[key2].common.write) {
                   if (!this.subscribedStates.includes(`box_${name}.behavior.input${i}.${key2}`)) {
-                    this.writeLog(`subscribe state box_${name}.behavior.input${i}.${key2}`, "debug");
+                    this.writeLog(
+                      `[Adapter v.${this.version} createObjects] subscribe state box_${name}.behavior.input${i}.${key2}`,
+                      "debug"
+                    );
                     this.subscribeStates(`box_${name}.behavior.input${i}.${key2}`);
                     this.subscribedStates.push(`box_${name}.behavior.input${i}.${key2}`);
                   }
@@ -645,42 +803,23 @@ class HueSyncBox extends utils.Adapter {
               }
             }
           }
-          this.writeLog(`all device / channel and states were created for ${name}`, "debug");
+          this.writeLog(
+            `[Adapter v.${this.version} createObjects] all device / channel and states were created for ${name}`,
+            "debug"
+          );
         }
       }
-    } catch (error) {
-      this.writeLog(`[createObjects] ${error.message} Stack: ${error.stack}`, "error");
+    } else {
+      this.writeLog(
+        `[Adapter v.${this.version} createObjects] no devices configured, please configure the adapter`,
+        "warn"
+      );
     }
   }
   writeLog(logText, logType) {
-    try {
-      if (logType === "warn" || logType === "error") {
-        if (this.messageHandler.length > 0) {
-          if (!this.messageHandler.find((message) => message.message === logText)) {
-            this.messageHandler.push({
-              severity: logType,
-              clearTimer: false,
-              message: logText
-            });
-            if (logType === "warn")
-              this.log.warn(logText);
-            if (logType === "error")
-              this.log.error(logText);
-            this.log.debug("messageHandler: " + JSON.stringify(this.messageHandler));
-          } else {
-            if (!this.messageHandler.find((message) => message.message === logText).clearTimer) {
-              this.messageHandler.find((message) => message.message === logText).clearTimer = true;
-              this.messageHandlerTimer = this.setTimeout(() => {
-                this.messageHandler.find((message) => message.message === logText).clearTimer = false;
-                this.messageHandler = this.messageHandler.filter(
-                  (message) => message.message !== logText
-                );
-                this.log.debug(`clear messageHandler for ${logText}`);
-              }, 3e5);
-            }
-            this.log.debug("messageHandler: " + JSON.stringify(this.messageHandler));
-          }
-        } else {
+    if (logType === "warn" || logType === "error") {
+      if (this.messageHandler.length > 0) {
+        if (!this.messageHandler.find((message) => message.message === logText)) {
           this.messageHandler.push({
             severity: logType,
             clearTimer: false,
@@ -690,24 +829,52 @@ class HueSyncBox extends utils.Adapter {
             this.log.warn(logText);
           if (logType === "error")
             this.log.error(logText);
-          this.log.debug("messageHandler: " + JSON.stringify(this.messageHandler));
+          this.log.debug(
+            `[Adapter v.${this.version} writeLog] messageHandler: ` + JSON.stringify(this.messageHandler)
+          );
+        } else {
+          if (!this.messageHandler.find((message) => message.message === logText).clearTimer) {
+            this.messageHandler.find((message) => message.message === logText).clearTimer = true;
+            this.messageHandlerTimer = this.setTimeout(() => {
+              this.messageHandler.find((message) => message.message === logText).clearTimer = false;
+              this.messageHandler = this.messageHandler.filter((message) => message.message !== logText);
+              this.log.debug(`[Adapter v.${this.version} writeLog] clear messageHandler for ${logText}`);
+            }, 3e5);
+          }
+          this.log.debug(
+            `[Adapter v.${this.version} writeLog] messageHandler: ` + JSON.stringify(this.messageHandler)
+          );
         }
       } else {
-        if (logType === "silly")
-          this.log.silly(logText);
-        if (logType === "info")
-          this.log.info(logText);
-        if (logType === "debug")
-          this.log.debug(logText);
+        this.messageHandler.push({
+          severity: logType,
+          clearTimer: false,
+          message: logText
+        });
+        if (logType === "warn")
+          this.log.warn(logText);
+        if (logType === "error")
+          this.log.error(logText);
+        this.log.debug(
+          `[Adapter v.${this.version} writeLog] messageHandler: ` + JSON.stringify(this.messageHandler)
+        );
       }
-    } catch (error) {
-      this.log.error(`writeLog error: ${error} , stack: ${error.stack}`);
+    } else {
+      if (logType === "silly")
+        this.log.silly(logText);
+      if (logType === "info")
+        this.log.info(logText);
+      if (logType === "debug")
+        this.log.debug(logText);
     }
   }
   async registration(obj) {
     this.requestCounter++;
     try {
-      this.writeLog("start registrations", "info");
+      this.writeLog(
+        `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] start registrations`,
+        `info`
+      );
       const device = obj.message;
       const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
       const agent = new https.Agent({
@@ -724,7 +891,10 @@ class HueSyncBox extends utils.Adapter {
         }
       );
       if (registrations.status === 200) {
-        this.writeLog(`registration for ${device.name} was successful`, "info");
+        this.writeLog(
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] registration for ${device.name} was successful`,
+          "info"
+        );
         if (registrations.data.accessToken) {
           if (obj.callback)
             this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
@@ -733,8 +903,12 @@ class HueSyncBox extends utils.Adapter {
         }
       }
     } catch (error) {
+      const device = obj.message;
       if (error.code === "ETIMEDOUT") {
-        this.writeLog(`[onMessage] ${error.message} Stack: ${error.stack}`, "error");
+        this.writeLog(
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] registration for ${device.name} failed, timeout. > message => ${error.message} Stack: ${error.stack} <`,
+          "error"
+        );
         const response = {
           code: error.code,
           message: error.message
@@ -744,12 +918,44 @@ class HueSyncBox extends utils.Adapter {
         this.requestCounter = 5;
         return;
       }
-      if (error.response.status === 400) {
-        if (error.response.data.code === 16) {
-          const response = error.response.data;
-          this.writeLog(`[registration] Code: 16 => ${JSON.stringify(response)}`, "debug");
+      if (error.response) {
+        if (error.response.status === 400) {
+          if (error.response.data.code === 16) {
+            const response = error.response.data;
+            console.log(
+              `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] Code: 16 => ${JSON.stringify(response)}`
+            );
+            this.writeLog(
+              `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] Code: 16 => ${JSON.stringify(response)}`,
+              "debug"
+            );
+          } else {
+            console.log(
+              `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] registration for ${device.name} failed, error: ${error.response.statusText} > message => ${error.message} Stack: ${error.stack} <`
+            );
+            this.writeLog(
+              `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] registration for ${device.name} failed, error: ${error.response.statusText} > message => ${error.message} Stack: ${error.stack} <`,
+              "error"
+            );
+            const response = {
+              code: error.response.status,
+              codeString: error.code,
+              message: error.message,
+              responseMessage: error.response.statusText
+            };
+            if (obj.callback)
+              this.sendTo(obj.from, obj.command, response, obj.callback);
+            this.requestCounter = 5;
+            return;
+          }
         } else {
-          this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
+          console.log(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] registration for ${device.name} failed, error: ${error.response.statusText} > message => ${error.message} Stack: ${error.stack} <`
+          );
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] registration for ${device.name} failed, error: ${error.response.statusText} > message => ${error.message} Stack: ${error.stack} <`,
+            "error"
+          );
           const response = {
             code: error.response.status,
             codeString: error.code,
@@ -762,12 +968,16 @@ class HueSyncBox extends utils.Adapter {
           return;
         }
       } else {
-        this.writeLog(`[registrations] ${error.message} Stack: ${error.stack}`, "error");
+        console.log(
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] registration for ${device.name} failed, error: ${error.message} > message => ${error.message} Stack: ${error.stack} <`
+        );
+        this.writeLog(
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registration] registration for ${device.name} failed, error: ${error.message} > message => ${error.message} Stack: ${error.stack} <`,
+          "error"
+        );
         const response = {
-          code: error.response.status,
-          codeString: error.code,
-          message: error.message,
-          responseMessage: error.response.statusText
+          code: error.code,
+          message: error.message
         };
         if (obj.callback)
           this.sendTo(obj.from, obj.command, response, obj.callback);
@@ -783,7 +993,10 @@ class HueSyncBox extends utils.Adapter {
       if (this.registrationTimer)
         this.clearTimeout(this.registrationTimer);
       this.requestCounter = 0;
-      this.writeLog("registration failed", "error");
+      this.writeLog(
+        `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} registrations] registration failed`,
+        `error`
+      );
       const response = {
         code: 500,
         message: "registration failed"
@@ -796,7 +1009,10 @@ class HueSyncBox extends utils.Adapter {
     try {
       const device = obj.message;
       let registrationsId = null;
-      this.writeLog(`request registrations id for ${device.name}`, "info");
+      this.writeLog(
+        `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} requestRegistrationsId] request registrations id for ${device.name}`,
+        "info"
+      );
       const registrationsUrl = `https://${device.ip}/api/v1/registrations`;
       const agent = new https.Agent({ rejectUnauthorized: false });
       const registrations = await import_axios.default.get(registrationsUrl, {
@@ -807,18 +1023,27 @@ class HueSyncBox extends utils.Adapter {
         httpsAgent: agent
       });
       if (registrations.status === 200) {
-        this.writeLog(`request registrations id for ${device.name} was successful`, "info");
+        this.writeLog(
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} requestRegistrationsId] request registrations id for ${device.name} was successful`,
+          "info"
+        );
         for (const index in registrations.data) {
           const instanceName = `hue_sync_box_${device.name}`;
           if (registrations.data[index].instanceName === instanceName) {
-            this.writeLog(`registrations id for ${device.name} is ${index}`, "info");
+            this.writeLog(
+              `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} requestRegistrationsId] registrations id for ${device.name} is ${index}`,
+              "info"
+            );
             registrationsId = parseInt(index, 10);
           }
         }
       }
       return registrationsId;
     } catch (error) {
-      this.writeLog(`[callRegistrationsId] ${error.message} Stack: ${error.stack}`, "error");
+      this.writeLog(
+        `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} requestRegistrationsId] ${error.message} Stack: ${error.stack}`,
+        "error"
+      );
       return null;
     }
   }
@@ -828,10 +1053,16 @@ class HueSyncBox extends utils.Adapter {
       if (device.id == 0 || device.id == void 0 || device.id == null) {
         const id = await this.requestRegistrationsId(obj);
         if (id != null) {
-          console.log("deleteRegistrations new id", id);
+          console.log(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} deleteRegistrations] deleteRegistrations new id`,
+            id
+          );
           device.id = id;
         } else {
-          this.writeLog("no id found", "error");
+          this.writeLog(
+            `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} deleteRegistrations] no id found`,
+            `error`
+          );
           const response = {
             code: 500,
             message: "no id found"
@@ -842,7 +1073,10 @@ class HueSyncBox extends utils.Adapter {
         }
       }
       if (!device.id) {
-        this.writeLog("no id found", "error");
+        this.writeLog(
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} deleteRegistrations] no id found`,
+          `error`
+        );
         const response = {
           code: 500,
           message: "no id found"
@@ -851,7 +1085,10 @@ class HueSyncBox extends utils.Adapter {
           this.sendTo(obj.from, obj.command, response, obj.callback);
         return;
       }
-      this.writeLog(`delete registrations for ${device.name}`, "info");
+      this.writeLog(
+        `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} deleteRegistrations] delete registrations for ${device.name}`,
+        "info"
+      );
       const deleteUrl = `https://${device.ip}/api/v1/registrations/${device.id}`;
       const deleteConfig = {
         method: "delete",
@@ -864,7 +1101,10 @@ class HueSyncBox extends utils.Adapter {
       };
       const deleteResponse = await (0, import_axios.default)(deleteConfig);
       if (deleteResponse.status === 200) {
-        this.writeLog(`registration for ${device.name} was deleted`, "info");
+        this.writeLog(
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} deleteRegistrations] registration for ${device.name} was deleted`,
+          "info"
+        );
         if (obj.command === "deleteObjectsAndLogOut") {
           const status = { delete: true, logOut: true };
           if (obj.callback)
@@ -876,34 +1116,25 @@ class HueSyncBox extends utils.Adapter {
         }
       } else {
         this.writeLog(
-          `[logOut]  delete registration for ${device.name} failed with status ${deleteResponse.status}`,
+          `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} deleteRegistrations] delete registration for ${device.name} failed with status ${deleteResponse.status}`,
           "error"
         );
       }
     } catch (error) {
-      this.writeLog(`[logOut] ${error.message} Stack: ${error.stack}`, "error");
+      this.writeLog(
+        `[Adapter v.${this.version} axios v.${import_axios.default.VERSION} deleteRegistrations] ${error.message} Stack: ${error.stack}`,
+        "error"
+      );
     }
   }
   async deleteObjects(obj) {
-    try {
-      const device = obj.message;
-      if (device.id == 0 || device.id == void 0 || device.id == null) {
-        const id = await this.requestRegistrationsId(obj);
-        if (id != null) {
-          device.id = id;
-        } else {
-          this.writeLog("no id found", "error");
-          const response = {
-            code: 500,
-            message: "no id found"
-          };
-          if (obj.callback)
-            this.sendTo(obj.from, obj.command, response, obj.callback);
-          return;
-        }
-      }
-      if (!device.id) {
-        this.writeLog("no id found", "error");
+    const device = obj.message;
+    if (device.id == 0 || device.id == void 0 || device.id == null) {
+      const id = await this.requestRegistrationsId(obj);
+      if (id != null) {
+        device.id = id;
+      } else {
+        this.writeLog(`[Adapter v.${this.version} deleteObjects] no id found`, `error`);
         const response = {
           code: 500,
           message: "no id found"
@@ -912,52 +1143,72 @@ class HueSyncBox extends utils.Adapter {
           this.sendTo(obj.from, obj.command, response, obj.callback);
         return;
       }
-      this.writeLog(`delete objects for ${device.name}`, "info");
-      const objects = await this.getAdapterObjectsAsync();
-      const deviceObjects = [];
-      if (objects) {
-        this.writeLog(`search for all device objects`, "debug");
-        Object.keys(objects).filter((key) => {
-          if (objects[key].type === "device") {
-            deviceObjects.push(objects[key]);
-          }
-        });
-        if (deviceObjects.length > 0) {
-          const deviceObject = deviceObjects.find((obj2) => {
-            this.writeLog(`check if the native id ${device.id} is present`, "info");
-            if (obj2.native && obj2.native.id === "no id" || !obj2.native.id) {
-              this.writeLog(`no id in native available`, "info");
-              this.writeLog(`search for the names ${device.name}`, "info");
-              if (obj2.common.name === device.name) {
-                this.writeLog(`Name found`, "info");
-                return obj2;
-              }
-            }
-            if (obj2.native && obj2.native.id === device.id) {
-              this.writeLog(`id found`, "info");
+    }
+    if (!device.id) {
+      this.writeLog(`[Adapter v.${this.version} deleteObjects] no id found`, `error`);
+      const response = {
+        code: 500,
+        message: "no id found"
+      };
+      if (obj.callback)
+        this.sendTo(obj.from, obj.command, response, obj.callback);
+      return;
+    }
+    this.writeLog(`[Adapter v.${this.version} deleteObjects] delete objects for ${device.name}`, "info");
+    const objects = await this.getAdapterObjectsAsync();
+    const deviceObjects = [];
+    if (objects) {
+      this.writeLog(`[Adapter v.${this.version} deleteObjects] search for all device objects`, "debug");
+      Object.keys(objects).filter((key) => {
+        if (objects[key].type === "device") {
+          deviceObjects.push(objects[key]);
+        }
+      });
+      if (deviceObjects.length > 0) {
+        const deviceObject = deviceObjects.find((obj2) => {
+          this.writeLog(
+            `[Adapter v.${this.version} deleteObjects] check if the native id ${device.id} is present`,
+            "info"
+          );
+          if (obj2.native && obj2.native.id === "no id" || !obj2.native.id) {
+            this.writeLog(`[Adapter v.${this.version} deleteObjects] no id in native available`, "info");
+            this.writeLog(
+              `[Adapter v.${this.version} deleteObjects] search for the names ${device.name}`,
+              "info"
+            );
+            if (obj2.common.name === device.name) {
+              this.writeLog(`[Adapter v.${this.version} deleteObjects] Name found`, "info");
               return obj2;
             }
-          });
-          if (deviceObject) {
-            await this.delObjectAsync(deviceObject._id, { recursive: true });
-            this.writeLog(`device object for ${device.name} was deleted`, "info");
-            if (obj.command === "deleteObjectsAndLogOut") {
-              this.writeLog(`delete registration for ${device.name}`, "info");
-              await this.deleteRegistrations(obj);
-            } else {
-              this.writeLog(
-                `delete objects for ${device.name} was finished send status to the Frontend`,
-                "info"
-              );
-              const status = { delete: true, logOut: false };
-              if (obj.callback)
-                this.sendTo(obj.from, obj.command, status, obj.callback);
-            }
+          }
+          if (obj2.native && obj2.native.id === device.id) {
+            this.writeLog(`[Adapter v.${this.version} deleteObjects] id found`, "info");
+            return obj2;
+          }
+        });
+        if (deviceObject) {
+          await this.delObjectAsync(deviceObject._id, { recursive: true });
+          this.writeLog(
+            `[Adapter v.${this.version} deleteObjects] device object for ${device.name} was deleted`,
+            "info"
+          );
+          if (obj.command === "deleteObjectsAndLogOut") {
+            this.writeLog(
+              `[Adapter v.${this.version} deleteObjects] delete registration for ${device.name}`,
+              "info"
+            );
+            await this.deleteRegistrations(obj);
+          } else {
+            this.writeLog(
+              `[Adapter v.${this.version} deleteObjects] delete objects for ${device.name} was finished send status to the Frontend`,
+              "info"
+            );
+            const status = { delete: true, logOut: false };
+            if (obj.callback)
+              this.sendTo(obj.from, obj.command, status, obj.callback);
           }
         }
       }
-    } catch (error) {
-      this.writeLog(`[deleteObjects] ${error.message} Stack: ${error.stack}`, "error");
     }
   }
   async onMessage(obj) {
@@ -988,7 +1239,10 @@ class HueSyncBox extends utils.Adapter {
       if (state.from === "system.adapter." + this.namespace) {
         return;
       } else {
-        this.writeLog(`state ${id} changed: ${state.val} (ack = ${state.ack})`, "debug");
+        this.writeLog(
+          `[Adapter v.${this.version} onStateChange] state ${id} changed: ${state.val} (ack = ${state.ack})`,
+          "debug"
+        );
         if (state.ack)
           return;
         const idWithoutAdapterName = id.replace(this.namespace + ".", "");
@@ -1000,7 +1254,7 @@ class HueSyncBox extends utils.Adapter {
       return;
     }
   }
-  onUnload(callback) {
+  async onUnload(callback) {
     try {
       if (this.requestTimer)
         this.clearTimeout(this.requestTimer);
@@ -1009,6 +1263,13 @@ class HueSyncBox extends utils.Adapter {
       if (this.messageHandlerTimer)
         this.clearTimeout(this.messageHandlerTimer);
       this.setState("info.connection", false, true);
+      for (const devicesKey in this.config.devices) {
+        this.setState(
+          `box_${await (0, import_replaceFunktion.replaceFunktion)(this.config.devices[devicesKey].name)}.reachable`,
+          false,
+          true
+        );
+      }
       callback();
     } catch (e) {
       callback();
