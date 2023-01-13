@@ -112,7 +112,7 @@
 		"connectionType": "local",
 		"dataSource": "poll",
 		"materialize": true,
-		"tier": 3,
+		"tier": 2,
 		"singleton": true,
 		"messagebox": true,
 		"adminUI": {
