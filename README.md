@@ -10,8 +10,8 @@
 
 ## hue-sync-box adapter for ioBroker
 
-**This adapter uses the service Sentry.io to automatically report exceptions and code errors and new device schemas to me as the developer.
-More details see below! [Sentry](#sentry)**
+**This adapter uses Sentry libraries to automatically report exceptions and code errors to the developers.** For more details and for information 
+how to disable the error reporting see [Sentry-Plugin Documentation](https://github.com/ioBroker/plugin-sentry#plugin-sentry)! Sentry reporting is used starting with js-controller 3.0. 
 
 ## The adapter requires a Node.js version >= 16.x
 
@@ -107,7 +107,7 @@ Sentry Reporting is used from js-controller 3.0.
 ## License
 MIT License
 
-Copyright (c) 2021-2022 Issi <issi.dev.iobroker@gmail.com>
+Copyright (c) 2022-2023 Issi <issi.dev.iobroker@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
