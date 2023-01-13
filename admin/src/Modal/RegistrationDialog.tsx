@@ -94,6 +94,15 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({
 		}
 	};
 
+	// reset all error after 10 seconds
+	React.useEffect(() => {
+		const timer = setTimeout(() => {
+			setError(false);
+			setDataError(false);
+		}, 10000);
+		return () => clearTimeout(timer);
+	}, [error, dataError]);
+
 	return (
 		<React.Fragment>
 			<Button disabled={disabled} variant="outlined" onClick={handleOpen}>
@@ -131,10 +140,7 @@ export const RegistrationDialog: React.FC<RegistrationDialogProps> = ({
 						</Typography>
 						{registration && (
 							<React.Fragment>
-								<RegistrationsTimer
-									cancel={cancel}
-									// progress={(percent) => handleProgress(percent)}
-								/>
+								<RegistrationsTimer cancel={cancel} />
 							</React.Fragment>
 						)}
 						{error && (
