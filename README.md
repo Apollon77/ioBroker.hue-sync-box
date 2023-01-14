@@ -69,6 +69,9 @@ the token is deleted from the box.
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (xXBJXx) fixed a bug
+
 ### 0.3.2 (2023-01-13)
 * (xXBJXx) update dependencies
 * (xXBJXx) Log output extended and improved

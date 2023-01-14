@@ -430,7 +430,7 @@ class HueSyncBox extends utils.Adapter {
 						'debug',
 					);
 
-					await this.setObjectNotExistsAsync(`box_${name}`, {
+					await this.extendObjectAsync(`box_${name}`, {
 						type: 'device',
 						common: {
 							name: this.config.devices[key].name,
