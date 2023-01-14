@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "hue-sync-box",
-		"version": "0.3.1",
+		"version": "0.3.2",
 		"news": {
+			"0.3.2": {
+				"en": "update dependencies\nLog output extended and improved\nAdded data point for the response JSON\nAdded data point \"Reachable\" to check if the box is reachable",
+				"de": "Update Abhängigkeiten\nLog-Ausgabe erweitert und verbessert\nDatenpunkt für die Antwort JSON hinzugefügt\nDatenpunkt \"reachable\" hinzugefügt, um zu prüfen, ob die Box erreichbar ist",
+				"ru": "обновление зависимостей\nРасширен и улучшен вывод журнала\nДобавлена точка данных для JSON ответа\nДобавлена точка данных \"Reachable\" для проверки, является ли ящик доступным",
+				"pt": "actualizar as dependências\nSaída de registo alargada e melhorada\nAdicionado ponto de dados para a resposta JSON\nAdicionado o ponto de dados \"Alcançável\" para verificar se a caixa é alcançável",
+				"nl": "afhankelijkheden bijwerken\nLogboekuitvoer uitgebreid en verbeterd\nGegevenspunt voor de respons JSON toegevoegd\nGegevenspunt \"Bereikbaar\" toegevoegd om te controleren of de box bereikbaar is",
+				"fr": "mise à jour des dépendances\nSortie du journal étendue et améliorée\nAjout d'un point de données pour la réponse JSON\nAjout d'un point de données \"Reachable\" pour vérifier si la boîte est accessible.",
+				"it": "aggiornamento delle dipendenze\nOutput di log ampliato e migliorato\nAggiunto punto di dati per la risposta JSON\nAggiunto il punto dati \"Raggiungibile\" per verificare se la casella è raggiungibile",
+				"es": "actualización de dependencias\nSalida de registro ampliada y mejorada\nAñadido punto de datos para la respuesta JSON\nAñadido punto de datos \"Alcanzable\" para comprobar si la casilla es alcanzable",
+				"pl": "uaktualnić zależności\nRozszerzone i poprawione wyjście dziennika\nDodano punkt danych dla odpowiedzi JSON\nDodano punkt danych \"Reachable\", aby sprawdzić, czy skrzynka jest osiągalna",
+				"uk": "оновлення залежностей\nРозширено та покращено виведення логів\nДодана точка даних для відповіді JSON\nДодана точка даних \"Reachable\" для перевірки доступності поля",
+				"zh-cn": "更新依赖性\n日志输出扩展和改进\n增加了响应JSON的数据点\n增加了数据点 \"Reachable\"，以检查盒子是否可达"
+			},
 			"0.3.1": {
 				"en": "Fixed error message that occurs after a successful registration.",
 				"de": "Die Fehlermeldung, die nach einer erfolgreichen Registrierung auftritt, wurde behoben.",

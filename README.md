@@ -69,7 +69,7 @@ the token is deleted from the box.
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.3.2 (2023-01-13)
 * (xXBJXx) update dependencies
 * (xXBJXx) Log output extended and improved
 * (xXBJXx) Added data point for the response JSON
