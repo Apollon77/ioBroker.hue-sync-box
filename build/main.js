@@ -320,10 +320,19 @@ class HueSyncBox extends utils.Adapter {
         await this.setStateAsync(id, state.val, true);
         await this.request();
       } else {
-        this.writeLog(
-          `[Adapter v.${this.version} sendCommand] response status: ${response.status} - ${response.statusText}`,
-          "error"
-        );
+        if (response.code === "ETIMEDOUT") {
+          this.writeLog(
+            `[Adapter v.${this.version} sendCommand] ${id} was not changed to ${state.val} because of timeout => massage: ${response.message} => try again`,
+            "error"
+          );
+          return;
+        } else {
+          this.writeLog(
+            `[Adapter v.${this.version} sendCommand] ${id} was not changed to ${state.val} because of error ${response.code} => massage: ${response.message}`,
+            "error"
+          );
+          return;
+        }
       }
     } else {
       this.writeLog(`[Adapter v.${this.version} sendCommand] no response => ${response}`, "error");
