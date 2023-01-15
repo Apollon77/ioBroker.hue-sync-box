@@ -373,18 +373,22 @@ class HueSyncBox extends utils.Adapter {
 			[commandWord as string]: state.val,
 		});
 
-		// check if the request was successful
-		if (response.status === 200) {
-			if (this.requestTimer) this.clearTimeout(this.requestTimer);
-			this.writeLog(`[Adapter v.${this.version} sendCommand] ${id} was changed to ${state.val}`, 'debug');
-			await this.setStateAsync(id, state.val, true);
-			// start call all the states to update the values
-			await this.request();
+		if (response) {
+			// check if the request was successful
+			if (response.status === 200) {
+				if (this.requestTimer) this.clearTimeout(this.requestTimer);
+				this.writeLog(`[Adapter v.${this.version} sendCommand] ${id} was changed to ${state.val}`, 'debug');
+				await this.setStateAsync(id, state.val, true);
+				// start call all the states to update the values
+				await this.request();
+			} else {
+				this.writeLog(
+					`[Adapter v.${this.version} sendCommand] response status: ${response.status} - ${response.statusText}`,
+					'error',
+				);
+			}
 		} else {
-			this.writeLog(
-				`[Adapter v.${this.version} sendCommand] response status: ${response.status} - ${response.statusText}`,
-				'error',
-			);
+			this.writeLog(`[Adapter v.${this.version} sendCommand] no response => ${response}`, 'error');
 		}
 	}
 
@@ -1041,17 +1045,24 @@ class HueSyncBox extends utils.Adapter {
 					httpsAgent: agent,
 				},
 			);
-			if (registrations.status === 200) {
-				this.writeLog(
-					`[Adapter v.${this.version} axios v.${axios.VERSION} registration] registration for ${device.name} was successful`,
-					'info',
-				);
+			if (registrations) {
+				if (registrations.status === 200) {
+					this.writeLog(
+						`[Adapter v.${this.version} axios v.${axios.VERSION} registration] registration for ${device.name} was successful`,
+						'info',
+					);
 
-				if (registrations.data.accessToken) {
-					if (obj.callback) this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
-					this.requestCounter = 5;
-					return;
+					if (registrations.data.accessToken) {
+						if (obj.callback) this.sendTo(obj.from, obj.command, registrations.data, obj.callback);
+						this.requestCounter = 5;
+						return;
+					}
 				}
+			} else {
+				this.writeLog(
+					`[Adapter v.${this.version} axios v.${axios.VERSION} registration] registration for ${device.name} was not successful - no response ${registrations}`,
+					'error',
+				);
 			}
 		} catch (error) {
 			const device = obj.message as { ip: string; name: string };
@@ -1180,22 +1191,29 @@ class HueSyncBox extends utils.Adapter {
 				},
 				httpsAgent: agent,
 			});
-			if (registrations.status === 200) {
-				this.writeLog(
-					`[Adapter v.${this.version} axios v.${axios.VERSION} requestRegistrationsId] request registrations id for ${device.name} was successful`,
-					'info',
-				);
-				for (const index in registrations.data) {
-					const instanceName = `hue_sync_box_${device.name}`;
+			if (registrations) {
+				if (registrations.status === 200) {
+					this.writeLog(
+						`[Adapter v.${this.version} axios v.${axios.VERSION} requestRegistrationsId] request registrations id for ${device.name} was successful`,
+						'info',
+					);
+					for (const index in registrations.data) {
+						const instanceName = `hue_sync_box_${device.name}`;
 
-					if (registrations.data[index].instanceName === instanceName) {
-						this.writeLog(
-							`[Adapter v.${this.version} axios v.${axios.VERSION} requestRegistrationsId] registrations id for ${device.name} is ${index}`,
-							'info',
-						);
-						registrationsId = parseInt(index, 10);
+						if (registrations.data[index].instanceName === instanceName) {
+							this.writeLog(
+								`[Adapter v.${this.version} axios v.${axios.VERSION} requestRegistrationsId] registrations id for ${device.name} is ${index}`,
+								'info',
+							);
+							registrationsId = parseInt(index, 10);
+						}
 					}
 				}
+			} else {
+				this.writeLog(
+					`[Adapter v.${this.version} axios v.${axios.VERSION} requestRegistrationsId] request registrations id for ${device.name} failed no response => ${registrations}`,
+					'error',
+				);
 			}
 			return registrationsId;
 		} catch (error) {
@@ -1258,21 +1276,28 @@ class HueSyncBox extends utils.Adapter {
 				httpsAgent: new https.Agent({ rejectUnauthorized: false }),
 			};
 			const deleteResponse = await axios(deleteConfig);
-			if (deleteResponse.status === 200) {
-				this.writeLog(
-					`[Adapter v.${this.version} axios v.${axios.VERSION} deleteRegistrations] registration for ${device.name} was deleted`,
-					'info',
-				);
-				if (obj.command === 'deleteObjectsAndLogOut') {
-					const status = { delete: true, logOut: true };
-					if (obj.callback) this.sendTo(obj.from, obj.command, status, obj.callback);
+			if (deleteResponse) {
+				if (deleteResponse.status === 200) {
+					this.writeLog(
+						`[Adapter v.${this.version} axios v.${axios.VERSION} deleteRegistrations] registration for ${device.name} was deleted`,
+						'info',
+					);
+					if (obj.command === 'deleteObjectsAndLogOut') {
+						const status = { delete: true, logOut: true };
+						if (obj.callback) this.sendTo(obj.from, obj.command, status, obj.callback);
+					} else {
+						const status = { delete: false, logOut: true };
+						if (obj.callback) this.sendTo(obj.from, obj.command, status, obj.callback);
+					}
 				} else {
-					const status = { delete: false, logOut: true };
-					if (obj.callback) this.sendTo(obj.from, obj.command, status, obj.callback);
+					this.writeLog(
+						`[Adapter v.${this.version} axios v.${axios.VERSION} deleteRegistrations] delete registration for ${device.name} failed with status ${deleteResponse.status}`,
+						'error',
+					);
 				}
 			} else {
 				this.writeLog(
-					`[Adapter v.${this.version} axios v.${axios.VERSION} deleteRegistrations] delete registration for ${device.name} failed with status ${deleteResponse.status}`,
+					`[Adapter v.${this.version} axios v.${axios.VERSION} deleteRegistrations] delete registration for ${device.name} failed => no response => ${deleteResponse}`,
 					'error',
 				);
 			}
