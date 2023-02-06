@@ -1,6 +1,6 @@
 {
   "name": "iobroker.hue-sync-box",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "An adapter to read and control the Philips Hue Sync Box",
   "author": {
     "name": "Issi",

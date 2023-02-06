@@ -1,8 +1,21 @@
 {
 	"common": {
 		"name": "hue-sync-box",
-		"version": "0.3.4",
+		"version": "0.3.5",
 		"news": {
+			"0.3.5": {
+				"en": "Dependency update",
+				"de": "Aktualisierung der Abhängigkeiten",
+				"ru": "Обновление зависимостей",
+				"pt": "Atualização de dependência",
+				"nl": "Afhankelijkheid bijwerken",
+				"fr": "Mise à jour des dépendances",
+				"it": "Aggiornamento della dipendenza",
+				"es": "Actualización de dependencia",
+				"pl": "Aktualizacja zależności",
+				"uk": "Оновлення залежностей",
+				"zh-cn": "依赖关系更新"
+			},
 			"0.3.4": {
 				"en": "fixed Sentry error reporting",
 				"de": "Sentry-Fehlerberichterstattung behoben",
@@ -80,19 +93,6 @@
 				"pl": "Poprawiono literówkę w README\nNaprawiono błąd podczas wysyłania poleceń do skrzynki",
 				"uk": "Орфографічна помилка в README виправлена\nВиправлена помилка при відправленні команд на коробку",
 				"zh-cn": "README中的拼写错误已修复\n在发送命令到盒子时修复了一个错误"
-			},
-			"0.2.0": {
-				"en": "Optimization and improvement of the registration process",
-				"de": "Optimierung und Verbesserung des Registrierungsprozesses",
-				"ru": "Оптимизация и улучшение процесса регистрации",
-				"pt": "Optimização e melhoria do processo de registo",
-				"nl": "Optimalisering en verbetering van het registratieproces",
-				"fr": "Optimisation et amélioration du processus d'enregistrement",
-				"it": "Ottimizzazione e miglioramento del processo di registrazione",
-				"es": "Optimización y mejora del proceso de registro",
-				"pl": "Optymalizacja i usprawnienie procesu rejestracji",
-				"uk": "Оптимізація та вдосконалення процесу реєстрації",
-				"zh-cn": "优化和改进注册程序"
 			}
 		},
 		"title": "Hue Sync Box",
