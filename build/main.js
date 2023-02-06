@@ -22,7 +22,8 @@ var import_object_definition = require("./lib/object_definition");
 var https = __toESM(require("https"));
 var import_axios = __toESM(require("axios"));
 var import_replaceFunktion = require("./lib/replaceFunktion");
-var import_register = require("source-map-support/register");
+var import_source_map_support = __toESM(require("source-map-support"));
+import_source_map_support.default.install();
 class HueSyncBox extends utils.Adapter {
   constructor(options = {}) {
     super({

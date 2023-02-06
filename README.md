@@ -69,6 +69,9 @@ the token is deleted from the box.
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (xXBJXx) Dependency update
+
 ### 0.3.4 (2023-01-15)
 * (xXBJXx) fixed Sentry error reporting
 

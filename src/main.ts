@@ -30,8 +30,9 @@ import axios from 'axios';
 import { replaceFunktion } from './lib/replaceFunktion';
 import { ApiResult } from './interface/apiResult';
 
-import 'source-map-support/register';
+import sourceMapSupport from 'source-map-support';
 
+sourceMapSupport.install();
 // Global variables here
 
 class HueSyncBox extends utils.Adapter {

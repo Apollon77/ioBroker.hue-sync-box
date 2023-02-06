@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Logo, useAdapter } from 'iobroker-react';
+import { SettingsHeader, useAdapter } from 'iobroker-react';
 import { Grid, Stack } from '@mui/material';
 import { AddHueSyncBox } from './Modal/AddHueSyncBox';
 import { BoxCard } from './component/BoxCard';
@@ -64,7 +64,7 @@ export const SettingPage: React.FC<SettingPageProps> = ({ onChange, settings, se
 	return (
 		<React.Fragment>
 			<Stack spacing={2}>
-				<Logo
+				<SettingsHeader
 					classes={{
 						logo: 'logo',
 					}}
